@@ -1,7 +1,6 @@
+supervisely==6.2.2
 torch>=1.10
 torchvision>=0.11.1
 tensorboard
 ninja
-PyYAML
-supervisely==6.2.9
-opencv-python
+g++>=5.4
