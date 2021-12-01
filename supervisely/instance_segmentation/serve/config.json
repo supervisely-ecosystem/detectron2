@@ -1,0 +1,161 @@
+{
+  "name": "Serve detectron",
+  "type": "app",
+  "categories": [
+    "neural network",
+    "detection"
+  ],
+  "description": "Deploy model as REST API service",
+  "docker_image": "supervisely/base-pytorch:6.0.22",
+  "main_script": "supervisely/serve/src/sly_serve.py",
+  "modal_template": "supervisely/serve/src/modal.html",
+  "modal_width": 700,
+  "modal_template_state": {
+    "modelWeightsOptions": "pretrained",
+    "selectedModel": "YOLOv5s",
+    "device": "0",
+    "weightsPath": "",
+    "models": [
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+            "config": "",
+            "weightsUrl": "",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
+        },
+        {
+              "config": "",
+              "weightsUrl": "",
+              "Model": "R50-C4",
+              "lr^sched": "1x",
+              "train_time": 0.584,
+              "inference_time": 0.110,
+              "train_mem": 5.2,
+              "box": 36.8,
+              "mask": 32.2,
+              "model_id": "137259246"
+          },
+        {
+              "config": "",
+              "weightsUrl": "",
+              "Model": "R50-C4",
+              "lr^sched": "1x",
+              "train_time": 0.584,
+              "inference_time": 0.110,
+              "train_mem": 5.2,
+              "box": 36.8,
+              "mask": 32.2,
+              "model_id": "137259246"
+          }
+    ],
+    "modelColumns": [
+        {"key": "Model", "title": "Model", "subtitle": null},
+        {"key": "lr^sched", "title": "lr<sub>sched</sub>", "subtitle": null},
+        {"key": "train_time", "title": "train_time", "subtitle": "(s/iter)"},
+        {"key": "inference_time", "title": "inference_time", "subtitle": "(s/im)"},
+        {"key": "train_mem", "title": "train_mem", "subtitle": "(GB)"},
+        {"key": "box", "title": "box", "subtitle": "AP"},
+        {"key": "mask", "title": "mask", "subtitle": "AP"},
+        {"key": "model_id", "title": "model_id", "subtitle": null}
+    ]
+  },
+  "task_location": "application_sessions",
+  "icon": "https://i.imgur.com/2U6HufM.png",
+  "icon_cover": true,
+  "isolate": true,
+  "need_gpu": true,
+  "headless": true,
+  "instance_version": "6.4.15",
+  "session_tags": [
+    "deployed_nn"
+  ]
+}
