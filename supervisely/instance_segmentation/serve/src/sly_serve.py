@@ -4,9 +4,6 @@ import sys
 import torch
 import supervisely_lib as sly
 
-sly.logger.info(".".join(torch.__version__.split(".")[:2]))
-sly.logger.info(torch.__version__.split("+")[-1])
-
 from detectron2.engine import DefaultPredictor
 from supervisely_lib.io.fs import get_file_name_with_ext
 from detectron2.config import get_cfg
@@ -76,7 +73,7 @@ if curr_dataset == 'COCO':
 
 elif curr_dataset == 'LVIS':
     curr_model_url = model_name_to_url_LVIS[pretrained_weights]
-    par_folder = 'LVISv1-InstanceSegmentation'
+    par_folder = 'LVISv0.5-InstanceSegmentation'
     model_config = os.path.join(par_folder, model_name_to_config_LVIS[pretrained_weights])
 
 elif curr_dataset == 'Cityscapes':
@@ -115,7 +112,7 @@ def preprocess():
     local_path = os.path.join(my_app.data_dir, curr_model_name)
 
     if modelWeightsOptions == "pretrained":
-        sly.fs.download(curr_model_url, local_path, my_app.cache, progress)  # TODO
+        sly.fs.download(curr_model_url, local_path, my_app.cache, progress)
     elif modelWeightsOptions == "custom":
         final_weights = custom_weights
         configs = os.path.join(Path(custom_weights).parents[1], 'opt.yaml')
