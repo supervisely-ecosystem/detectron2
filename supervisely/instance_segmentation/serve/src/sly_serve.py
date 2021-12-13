@@ -22,6 +22,7 @@ TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 
 meta: sly.ProjectMeta = None
+predictor = None
 device = os.environ['modal.state.device']
 
 model_name_to_url_COCO = {'R50-C4(1x)': 'https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x/137259246/model_final_9243eb.pkl',
@@ -235,7 +236,9 @@ def construct_model_meta(predictor):
 #@my_app.callback("preprocess")
 @sly.timeit
 def preprocess():
-    global meta
+
+    global meta, predictor
+
     progress = sly.Progress("Downloading weights", 1, is_size=True, need_info_log=True)
     local_path = os.path.join(my_app.data_dir, curr_model_name)
 
