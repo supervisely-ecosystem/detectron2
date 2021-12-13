@@ -11,6 +11,8 @@ from detectron2 import model_zoo
 from pathlib import Path
 import yaml
 
+device = torch.device("cuda")
+torch.rand(10).to(device)
 
 root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
 sly.logger.info(f"Root source directory: {root_source_path}")
