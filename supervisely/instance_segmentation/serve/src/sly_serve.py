@@ -260,11 +260,6 @@ def preprocess():
 
     predictor = DefaultPredictor(cfg)
     meta = construct_model_meta(predictor)
-
-    im = cv2.imread(os.path.join(str(pathlib.Path(sys.argv[0]).parents[3]), '1.jpg'))
-    outputs = predictor(im)
-
-
     sly.logger.info("Model has been successfully deployed")
 
 
