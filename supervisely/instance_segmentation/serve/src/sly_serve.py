@@ -10,7 +10,6 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from pathlib import Path
 import yaml
-from detectron2.utils.visualizer import Visualizer
 
 
 root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
@@ -236,6 +235,7 @@ def construct_model_meta(predictor):
 #@my_app.callback("preprocess")
 @sly.timeit
 def preprocess():
+    global meta
     progress = sly.Progress("Downloading weights", 1, is_size=True, need_info_log=True)
     local_path = os.path.join(my_app.data_dir, curr_model_name)
 
