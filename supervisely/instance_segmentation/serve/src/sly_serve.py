@@ -11,7 +11,7 @@ from detectron2 import model_zoo
 from pathlib import Path
 import yaml
 
-
+a = torch.tensor([1.0, 2.0]).cuda()
 root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
 sly.logger.info(f"Root source directory: {root_source_path}")
 sys.path.append(root_source_path)
