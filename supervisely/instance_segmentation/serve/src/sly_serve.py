@@ -1,4 +1,4 @@
-import os
+import os, cv2
 import pathlib
 import sys
 import torch
@@ -9,9 +9,11 @@ from supervisely_lib.io.fs import get_file_name_with_ext
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from pathlib import Path
+import yaml
+from detectron2.utils.visualizer import Visualizer
 
 
-root_source_path = str(pathlib.Path(sys.argv[0]).parents[3])
+root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
 sly.logger.info(f"Root source directory: {root_source_path}")
 sys.path.append(root_source_path)
 
@@ -21,6 +23,7 @@ TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 
 meta: sly.ProjectMeta = None
+device = os.environ['modal.state.device']
 
 model_name_to_url_COCO = {'R50-C4(1x)': 'https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x/137259246/model_final_9243eb.pkl',
                      'R50-DC5(1x)': 'https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_1x/137260150/model_final_4f86c3.pkl',
@@ -86,6 +89,131 @@ else:
 
 curr_model_name = get_file_name_with_ext(curr_model_url)
 CONFIDENCE = "confidence"
+
+settings_path = os.path.join(root_source_path, 'configs', model_config)
+with open(settings_path, 'r') as file:
+    default_settings_str = file.read()
+    default_settings = yaml.safe_load(default_settings_str)
+
+
+@my_app.callback("get_output_classes_and_tags")
+@sly.timeit
+def get_output_classes_and_tags(api: sly.Api, task_id, context, state, app_logger):
+    request_id = context["request_id"]
+    my_app.send_response(request_id, data=meta.to_json())
+
+
+@my_app.callback("get_session_info")
+@sly.timeit
+def get_session_info(api: sly.Api, task_id, context, state, app_logger):
+    info = {
+        "app": "Detectron2 serve",
+        "device": str(device),
+        # "weights": final_weights,
+        # "half": str(half),
+        # "input_size": imgsz,
+        "session_id": task_id,
+        "classes_count": len(meta.obj_classes),
+        "tags_count": len(meta.tag_metas),
+    }
+    request_id = context["request_id"]
+    my_app.send_response(request_id, data=info)
+
+
+@my_app.callback("get_custom_inference_settings")
+@sly.timeit
+def get_custom_inference_settings(api: sly.Api, task_id, context, state, app_logger):
+    request_id = context["request_id"]
+    my_app.send_response(request_id, data={"settings": default_settings_str})
+
+
+def inference_image_path(image_path, context, state, app_logger):
+
+    global predictor
+
+    app_logger.debug("Input path", extra={"path": image_path})
+
+    classes_str = predictor.metadata.thing_classes
+    im = cv2.imread('/home/andrew/alex_work/app/detectron2/supervisely/1.jpg')
+    height, width = im.shape[:2]
+    outputs = predictor(im)
+    instances = outputs["instances"].to(torch.device("cpu"))
+    boxes = instances.pred_boxes if instances.has("pred_boxes") else None
+    scores = instances.scores if instances.has("scores") else None
+    classes = instances.pred_classes.tolist() if instances.has("pred_classes") else None
+
+    labels = []
+
+    for bbox, score, curr_class_idx in zip(boxes, scores, classes):
+        top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
+        rect = sly.Rectangle(top, left, bottom, right)
+        curr_class_name = classes_str[curr_class_idx]
+        obj_class = meta.get_obj_class(curr_class_name)
+        tag = sly.Tag(meta.get_tag_meta(CONFIDENCE), round(float(score), 4))
+        label = sly.Label(rect, obj_class, sly.TagCollection([tag]))
+        labels.append(label)
+
+    ann = sly.Annotation(img_size=(height, width), labels=labels)
+
+    ann_json = ann.to_json()
+
+    return ann_json
+
+
+@my_app.callback("inference_image_url")
+@sly.timeit
+def inference_image_url(api: sly.Api, task_id, context, state, app_logger):
+    app_logger.debug("Input data", extra={"state": state})
+
+    image_url = state["image_url"]
+    ext = sly.fs.get_file_ext(image_url)
+    if ext == "":
+        ext = ".jpg"
+    local_image_path = os.path.join(my_app.data_dir, sly.rand_str(15) + ext)
+
+    sly.fs.download(image_url, local_image_path)
+    ann_json = inference_image_path(local_image_path, context, state, app_logger)
+    sly.fs.silent_remove(local_image_path)
+
+    request_id = context["request_id"]
+    my_app.send_response(request_id, data=ann_json)
+
+
+@my_app.callback("inference_image_id")
+@sly.timeit
+def inference_image_id(api: sly.Api, task_id, context, state, app_logger):
+    app_logger.debug("Input data", extra={"state": state})
+    image_id = state["image_id"]
+    image_info = api.image.get_info_by_id(image_id)
+    image_path = os.path.join(my_app.data_dir, sly.rand_str(10) + image_info.name)
+    api.image.download_path(image_id, image_path)
+    ann_json = inference_image_path(image_path, context, state, app_logger)
+    sly.fs.silent_remove(image_path)
+    request_id = context["request_id"]
+    my_app.send_response(request_id, data=ann_json)
+
+
+@my_app.callback("inference_batch_ids")
+@sly.timeit
+def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
+    app_logger.debug("Input data", extra={"state": state})
+    ids = state["batch_ids"]
+    infos = api.image.get_info_by_id_batch(ids)
+    paths = []
+    for info in infos:
+        paths.append(os.path.join(my_app.data_dir, sly.rand_str(10) + info.name))
+    api.image.download_paths(infos[0].dataset_id, ids, paths)
+
+    results = []
+    for image_path in paths:
+        ann_json = inference_image_path(image_path, context, state, app_logger)
+        results.append(ann_json)
+        sly.fs.silent_remove(image_path)
+
+    request_id = context["request_id"]
+    my_app.send_response(request_id, data=results)
+
+#=================================================================================================
 
 def construct_model_meta(predictor):
     names = predictor.metadata.thing_classes
