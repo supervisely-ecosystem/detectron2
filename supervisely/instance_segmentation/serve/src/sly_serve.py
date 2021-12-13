@@ -261,7 +261,7 @@ def preprocess():
     predictor = DefaultPredictor(cfg)
     meta = construct_model_meta(predictor)
 
-    im = cv2.imread('/home/andrew/alex_work/app/detectron2/supervisely/1.jpg')
+    im = cv2.imread(os.path.join(str(pathlib.Path(sys.argv[0]).parents[3]), '1.jpg'))
     outputs = predictor(im)
 
 
