@@ -7,7 +7,7 @@
   ],
   "description": "Deploy model as REST API service",
   "docker_image": "ferrum848/alex_detectron2",
-  "main_script": "detectron/utils/collect_env.py",
+  "main_script": "supervisely/instance_segmentation/serve/src/sly_serve.py",
   "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
   "modal_width": 700,
   "modal_template_state": {

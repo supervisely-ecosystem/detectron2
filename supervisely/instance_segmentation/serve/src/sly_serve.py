@@ -260,6 +260,11 @@ def preprocess():
 
     predictor = DefaultPredictor(cfg)
     meta = construct_model_meta(predictor)
+
+    im = cv2.imread('/home/andrew/alex_work/app/detectron2/supervisely/1.jpg')
+    outputs = predictor(im)
+
+
     sly.logger.info("Model has been successfully deployed")
 
 
