@@ -129,8 +129,6 @@ def get_custom_inference_settings(api: sly.Api, task_id, context, state, app_log
 
 def inference_image_path(image_path, context, state, app_logger):
 
-    global predictor
-
     app_logger.debug("Input path", extra={"path": image_path})
 
     classes_str = predictor.metadata.thing_classes
