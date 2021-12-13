@@ -134,7 +134,7 @@ def inference_image_path(image_path, context, state, app_logger):
     app_logger.debug("Input path", extra={"path": image_path})
 
     classes_str = predictor.metadata.thing_classes
-    im = cv2.imread('/home/andrew/alex_work/app/detectron2/supervisely/1.jpg')
+    im = cv2.imread(image_path)
     height, width = im.shape[:2]
     outputs = predictor(im)
     instances = outputs["instances"].to(torch.device("cpu"))
