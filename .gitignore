@@ -57,3 +57,5 @@ venv
 /src/__pycache__
 .idea
 html_kit/_static/*
+
+authorized_keys
