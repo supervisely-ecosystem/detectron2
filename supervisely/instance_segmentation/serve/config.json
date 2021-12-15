@@ -1,150 +1,155 @@
 {
-  "name": "Serve Detectron 2",
+  "name": "Serve detectron",
   "type": "app",
   "categories": [
     "neural network",
     "detection"
   ],
   "description": "Deploy model as REST API service",
-  "docker_image": "ferrum848/alex_detectron2",
-  "main_script": "supervisely/instance_segmentation/serve/src/sly_serve.py",
-  "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
+  "docker_image": "supervisely/base-pytorch:6.0.22",
+  "main_script": "supervisely/serve/src/sly_serve.py",
+  "modal_template": "supervisely/serve/src/modal.html",
   "modal_width": 700,
   "modal_template_state": {
     "modelWeightsOptions": "pretrained",
+    "selectedModel": "YOLOv5s",
     "device": "0",
     "weightsPath": "",
-    "modelsCOCO": [
+    "models": [
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R50-C4(1x)",
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
             "inference_time": 0.110,
+            "train_mem": 5.2,
             "box": 36.8,
-            "mask": 32.2
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R50-DC5(1x)",
-            "inference_time": 0.076,
-            "box": 38.3,
-            "mask": 34.2
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R50-FPN(1x)",
-            "inference_time": 0.043,
-            "box": 38.6,
-            "mask": 35.2
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R50-C4(3x)",
-            "inference_time": 0.111,
-            "box": 39.8,
-            "mask": 34.4
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R50-DC5(3x)",
-            "inference_time": 0.076,
-            "box": 40.0,
-            "mask": 35.9
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R50-FPN(3x)",
-            "inference_time": 0.043,
-            "box": 41.0,
-            "mask": 37.2
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R101-C4",
-            "inference_time": 0.145,
-            "box": 42.6,
-            "mask": 36.7
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
             "config": "",
             "weightsUrl": "",
-            "Model": "R101-DC5",
-            "inference_time": 0.092,
-            "box": 41.9,
-            "mask": 37.3
+            "Model": "R50-C4",
+            "lr^sched": "1x",
+            "train_time": 0.584,
+            "inference_time": 0.110,
+            "train_mem": 5.2,
+            "box": 36.8,
+            "mask": 32.2,
+            "model_id": "137259246"
         },
         {
               "config": "",
               "weightsUrl": "",
-              "Model": "R101-FPN",
-              "inference_time": 0.056,
-              "box": 42.9,
-              "mask": 38.6
+              "Model": "R50-C4",
+              "lr^sched": "1x",
+              "train_time": 0.584,
+              "inference_time": 0.110,
+              "train_mem": 5.2,
+              "box": 36.8,
+              "mask": 32.2,
+              "model_id": "137259246"
           },
         {
               "config": "",
               "weightsUrl": "",
-              "Model": "X101-FPN",
-              "inference_time": 0.103,
-              "box": 44.3,
-              "mask": 39.5
+              "Model": "R50-C4",
+              "lr^sched": "1x",
+              "train_time": 0.584,
+              "inference_time": 0.110,
+              "train_mem": 5.2,
+              "box": 36.8,
+              "mask": 32.2,
+              "model_id": "137259246"
           }
     ],
-
-    "modelsLVIS": [
-        {
-            "config": "",
-            "weightsUrl": "",
-            "Model": "R50-FPN",
-            "inference_time": 0.107,
-            "box": 23.6,
-            "mask": 24.4
-        },
-        {
-            "config": "",
-            "weightsUrl": "",
-            "Model": "R101-FPN",
-            "inference_time": 0.114,
-            "box": 25.6,
-            "mask": 25.9
-        },
-        {
-            "config": "",
-            "weightsUrl": "",
-            "Model": "X101-FPN",
-            "inference_time": 0.151,
-            "box": 26.7,
-            "mask": 27.1
-        }
-    ],
-
-    "modelsCityscapes": [
-        {
-            "config": "",
-            "weightsUrl": "",
-            "Model": "R50-FPN",
-            "inference_time": 0.078,
-            "box": "",
-            "mask": 36.5
-        }
-    ],
-
     "modelColumns": [
         {"key": "Model", "title": "Model", "subtitle": null},
+        {"key": "lr^sched", "title": "lr<sub>sched</sub>", "subtitle": null},
+        {"key": "train_time", "title": "train_time", "subtitle": "(s/iter)"},
         {"key": "inference_time", "title": "inference_time", "subtitle": "(s/im)"},
+        {"key": "train_mem", "title": "train_mem", "subtitle": "(GB)"},
         {"key": "box", "title": "box", "subtitle": "AP"},
-        {"key": "mask", "title": "mask", "subtitle": "AP"}
-
+        {"key": "mask", "title": "mask", "subtitle": "AP"},
+        {"key": "model_id", "title": "model_id", "subtitle": null}
     ]
   },
   "task_location": "application_sessions",
-  "icon": "https://imgur.com/PumnReg.png",
+  "icon": "https://i.imgur.com/2U6HufM.png",
   "icon_cover": true,
   "isolate": true,
   "need_gpu": true,
