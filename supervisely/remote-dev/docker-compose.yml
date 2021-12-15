@@ -1,0 +1,14 @@
+
+version: "2.2"
+services:
+  remote_dev_yolo5:
+    shm_size: '8gb'
+    runtime: nvidia
+    build:
+      context: .
+      args:
+        IMAGE: supervisely/base-pytorch:6.0.22
+    ports:
+      - "9876:22"
+    volumes:
+      - "./data:/data"
