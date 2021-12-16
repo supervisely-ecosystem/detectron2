@@ -103,7 +103,7 @@ def get_output_classes_and_tags(api: sly.Api, task_id, context, state, app_logge
     my_app.send_response(request_id, data=meta.to_json())
 
 
-@my_app.callback("get_session_info")
+@my_app.callback("get_info")
 @sly.timeit
 def get_session_info(api: sly.Api, task_id, context, state, app_logger):
     info = {
@@ -278,8 +278,13 @@ def main():
     my_app.run()
 
 
+#@TODO: !!!BBOXES TO MASKS
+
+
 #@TODO: move inference methods to SDK
 #@TODO: augment inference
 #@TODO: https://pypi.org/project/cachetools/
+
+
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
