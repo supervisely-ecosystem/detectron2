@@ -257,10 +257,8 @@ def preprocess():
     cfg.merge_from_file(model_zoo.get_config_file(model_config))
     cfg.MODEL.WEIGHTS = local_path
 
-
     predictor = DefaultPredictor(cfg)
     meta = construct_model_meta(predictor)
-    sly.logger.info("Model has been successfully deployed")
 
 
 def main():
@@ -274,6 +272,7 @@ def main():
     })
 
     preprocess()
+    sly.logger.info("🟩 Model has been successfully deployed")
     #my_app.run(initial_events=[{"command": "preprocess"}])
     my_app.run()
 
