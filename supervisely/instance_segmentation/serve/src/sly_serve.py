@@ -10,6 +10,7 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from pathlib import Path
 import yaml
+import numpy as np
 
 a = torch.tensor([1.0, 2.0]).cuda()
 root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
@@ -139,16 +140,22 @@ def inference_image_path(image_path, context, state, app_logger):
     boxes = instances.pred_boxes if instances.has("pred_boxes") else None
     scores = instances.scores if instances.has("scores") else None
     classes = instances.pred_classes.tolist() if instances.has("pred_classes") else None
+    masks = instances.pred_masks.tolist() if instances.has("pred_masks") else None
 
     labels = []
 
-    for bbox, score, curr_class_idx in zip(boxes, scores, classes):
-        top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
-        rect = sly.Rectangle(top, left, bottom, right)
+    for bbox, score, curr_class_idx, mask in zip(boxes, scores, classes, masks):
+        #top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
+        #rect = sly.Rectangle(top, left, bottom, right)
+
+        mask_np = np.asarray(mask, dtype=np.bool_)
+        bitmap = sly.Bitmap(mask_np)
+
         curr_class_name = classes_str[curr_class_idx]
         obj_class = meta.get_obj_class(curr_class_name)
         tag = sly.Tag(meta.get_tag_meta(CONFIDENCE), round(float(score), 4))
-        label = sly.Label(rect, obj_class, sly.TagCollection([tag]))
+        #label = sly.Label(rect, obj_class, sly.TagCollection([tag]))
+        label = sly.Label(bitmap, obj_class, sly.TagCollection([tag]))
         labels.append(label)
 
     ann = sly.Annotation(img_size=(height, width), labels=labels)
@@ -223,7 +230,8 @@ def construct_model_meta(predictor):
         for i in range(len(names)):
             colors.append(sly.color.generate_rgb(exist_colors=colors))
 
-    obj_classes = [sly.ObjClass(name, sly.Rectangle, color) for name, color in zip(names, colors)]
+    obj_classes = [sly.ObjClass(name, sly.Bitmap, color) for name, color in zip(names, colors)]
+    #obj_classes = [sly.ObjClass(name, sly.Rectangle, color) for name, color in zip(names, colors)]
     tags = [sly.TagMeta(CONFIDENCE, sly.TagValueType.ANY_NUMBER)]
 
     meta = sly.ProjectMeta(obj_classes=sly.ObjClassCollection(obj_classes),
