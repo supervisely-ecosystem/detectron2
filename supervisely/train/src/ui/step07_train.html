@@ -25,12 +25,12 @@
             <span style="color: #5a6772;">Training has been successfully finished</span>
         </div>
     </div>
-    <div v-if="data.progressEpoch.message && !data.outputUrl" class="mt10">
-        <div style="color: #20a0ff">
-            {{data.progressEpoch.message}}: {{data.progressEpoch.current}} / {{data.progressEpoch.total}}
-        </div>
-        <el-progress :percentage="data.progressEpoch.percent"></el-progress>
-    </div>
+
+    <span v-if="state.eta">
+        ETA: {{state.eta}}
+    </span>
+
+
     <div v-if="data.progressIter.message && !data.outputUrl" class="mt10">
         <div style="color: #20a0ff">
             {{data.progressIter.message}}: {{data.progressIter.current}} / {{data.progressIter.total}}
@@ -82,67 +82,41 @@
             </div>
         </sly-field>
 
-        <sly-field title="Predictions improvement dynamics"
-                   description="Model predictions over time for random images from train/val"
-                   v-if="data.gallery && Object.keys(data.gallery.content.annotations).length > 0"
-        >
-            <sly-field :title="`INFO: Visualizations will be available every ${state.visStep} epoch(-s)`"
-                       description="visualization for every epoch is not available now"
-                       style="padding-top: 0; padding-bottom: 0">
+        <div class="mt10 mb10 ml10 mr10" v-if="data.previewPredLinks.length > 0">
 
-                <sly-icon slot="icon" :options="{ color: '#13ce66', bgColor: '#e1f7eb', rounded: false }">
-                    <i class="zmdi zmdi-info-outline"></i>
-                </sly-icon>
-            </sly-field>
-            <div class="fflex">
-                <el-button size="small"
-                           type="primary" class="regular action-icon-btn"
-                           @click="state.setTimeIndexLoading = true; state.visEpoch -= state.visStep; command('set_gallery_time_index')"
-                           :disabled="state.visEpoch - state.visStep < 1 || data.finishedEpoch === 0 || state.done7"
-                           :loading="state.setTimeIndexLoading">
-                    <i class="zmdi zmdi-arrow-left"></i>
-                </el-button>
-                <div class="ml15 mr15">Show epoch {{state.visEpoch}} / {{data.finishedEpoch}}</div>
-                <el-button size="small"
-                           type="primary" class="regular action-icon-btn"
-                           @click="state.setTimeIndexLoading = true; state.visEpoch += state.visStep; command('set_gallery_time_index')"
-                           :disabled="state.visEpoch + state.visStep > data.finishedEpoch || data.finishedEpoch === 0  || state.done7"
-                           :loading="state.setTimeIndexLoading">
-                    <i class="zmdi zmdi-arrow-right"></i>
-                </el-button>
-                <el-button type="text"
-                           @click="command('follow_latest_prediction')"
+            <div class="block">
+                <div><b>visualization epoch</b></div>
+                <el-slider
+
+                        v-model="state.currEpochPreview"
+
+                        show-stops
+                        :min="state.valInterval"
+                        :max="data.previewPredLinks.length * state.visStep"
+                        :step="state.visStep"
+                        :disabled="data.previewPredLinks.length < 2"
+                        @input="command('previewByEpoch')"
+
                 >
-                    <i class="zmdi zmdi-rotate-left ml15 mr5"></i>follow latest
-                </el-button>
+
+                </el-slider>
             </div>
-            <!--            <div class="fflex">-->
-            <!--                <div class="ml15 mr15">Show epoch {{state.visEpoch}} / {{data.finishedEpoch}}</div>-->
-            <!--                <el-slider v-model="state.visEpoch"-->
-            <!--                           show-input-->
-            <!--                           :min="1"-->
-            <!--                           style="width: 350px;"-->
-            <!--                           :max="data.finishedEpoch"-->
-            <!--                           :debounce="700"-->
-            <!--                           @change="command('set_gallery_time_index')">-->
-            <!--                </el-slider>-->
-            <!--                <el-button type="text" @click="command('follow_latest_prediction')">-->
-            <!--                    <i class="zmdi zmdi-rotate-left ml15 mr5"></i>follow latest-->
-            <!--                </el-button>-->
-            <!--            </div>-->
-            <sly-grid-gallery v-if="data.gallery"
-                              :content="data.gallery.content"
-                              :options="data.gallery.options">
-                <template v-slot:card-footer="{ annotation }">
-                    <div class="mt5" style="text-align: center">
-                        <el-tag type="primary">{{annotation.title}}</el-tag>
-                    </div>
-                </template>
-            </sly-grid-gallery>
+        </div>
+        <sly-grid-gallery
+                class="mt10"
+                v-if="data.galleryPreview"
+                :content="data.galleryPreview.content"
+                :options="data.galleryPreview.options">
+            <template v-slot:card-footer="{ annotation }">
+                <div class="mt5" style="text-align: center">
+                    <el-tag type="primary">{{ annotation.title }}</el-tag>
+                </div>
+            </template>
+        </sly-grid-gallery>
         </sly-field>
         <div v-else
              v-loading="true"
-             :element-loading-text="`Predictions will be available after ${state.visStep} epoch...`"
+             :element-loading-text="`Predictions will be available after ${state.visStep} iterations...`"
              style="height: 150px">
         </div>
     </div>

@@ -56,8 +56,8 @@ def get_sl_dicts():
                 for label in ann.labels:
 
                     rect = label.geometry.to_bbox()
-                    curr_poly = label.geometry.exterior_np.tolist()
-                    new_poly = [point[::-1] for point in curr_poly ]
+                    curr_poly = label.geometry.convert(sly.Polygon)[0].exterior_np.tolist()
+                    new_poly = [point[::-1] for point in curr_poly]
 
                     obj = {
                         "bbox": [rect.left, rect.top, rect.right, rect.bottom],
@@ -107,12 +107,13 @@ cfg.SOLVER.MAX_ITER = 300    # 300 iterations seems good enough for this toy dat
 cfg.SOLVER.STEPS = []        # do not decay learning rate
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
+cfg.MODEL.DEVICE = 'cuda:0'
 # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
-# os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-# trainer = DefaultTrainer(cfg)
-# trainer.resume_or_load(resume=False)
-# trainer.train()
+os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+trainer = DefaultTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
 
 
 #======================================================================================================================
@@ -132,6 +133,6 @@ for d in random.sample(dataset_dicts, 3):
                    scale=0.5  # remove the colors of unsegmented pixels. This option is only available for segmentation models
     )
     out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-    cv2.imshow('', out.get_image()[:, :, ::-1])
-    if cv2.waitKey(0) == 27:
-        break
+    cv2.imwrite('/root/training_example.png', out.get_image()[:, :, ::-1])
+    # if cv2.waitKey(0) == 27:
+    #     break

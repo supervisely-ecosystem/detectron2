@@ -1,7 +1,25 @@
+import functools
+
+import numpy as np
+from detectron2.structures import BoxMode
+from detectron2.data import DatasetCatalog, MetadataCatalog
+from detectron2.utils.visualizer import Visualizer
+from detectron2.structures import BoxMode
+
+from detectron2.engine import DefaultTrainer
+from detectron2 import model_zoo
+from detectron2.config import get_cfg
+from detectron2.modeling import build_model
+
+import json
 import os
 import sys
 import random
 from functools import partial
+from PIL import Image
+import shutil
+
+from supervisely_lib.app.widgets import CompareGallery
 
 import step02_splits
 import step04_augs
@@ -10,27 +28,18 @@ import supervisely_lib as sly
 import sly_globals as g
 import step03_classes
 
-
+import sly_plain_train_net
 
 _open_lnk_name = "open_app.lnk"
-project_dir_seg = None
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
 
-chart_lr: sly.app.widgets.Chart = None
-chart_loss: sly.app.widgets.Chart = None
-chart_acc: sly.app.widgets.Chart = None
 
-gallery: sly.app.widgets.PredictionsDynamicsGallery = None
 train_vis_items_path = os.path.join(g.info_dir, "train_vis_items.json")
 val_vis_items_path = os.path.join(g.info_dir, "val_vis_items.json")
 
-progress_epoch: sly.app.widgets.ProgressBar = None
-progress_iter: sly.app.widgets.ProgressBar = None
-progress_other: sly.app.widgets.ProgressBar = None
-
 
 def init(data, state):
-    # data["eta"] = None
+    state["eta"] = None
 
     init_charts(data, state)
     init_progress_bars(data)
@@ -45,13 +54,18 @@ def init(data, state):
     data["outputUrl"] = None
 
     state["visEpoch"] = 0
-    state["visStep"] = 0
 
     data["finishedEpoch"] = 0
     state["setTimeIndexLoading"] = False
 
-    data["gallery"] = gallery
-    state["visSets"] = ["train", "val"]
+    gallery_custom = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
+    data[f"galleryPreview"] = gallery_custom.to_json()
+
+    data["previewPredLinks"] = []
+
+    state["currEpochPreview"] = 1
+    state["visStep"] = 0
+
 
 
 def restart(data, state):
@@ -59,47 +73,35 @@ def restart(data, state):
 
 
 def init_charts(data, state):
-    global chart_lr, chart_loss, chart_acc
-    chart_lr = sly.app.widgets.Chart(g.task_id, g.api, "data.chartLR",
-                                     title="LR", series_names=["LR"],
-                                     yrange=[0, state["lr"] + state["lr"]],
-                                     ydecimals=6, xdecimals=2)
-    chart_loss = sly.app.widgets.Chart(g.task_id, g.api, "data.chartLoss",
-                                      title="Loss", series_names=["train", "val"],
-                                      smoothing=0.6, ydecimals=6, xdecimals=2)
-    chart_acc = sly.app.widgets.Chart(g.task_id, g.api, "data.chartAcc",
-                                      title="Val Acc", series_names=["avg IoU", "avg Dice"],
-                                      yrange=[0, 1],
-                                      smoothing=0.6, ydecimals=6, xdecimals=2)
     state["smoothing"] = 0.6
 
-    chart_lr.init_data(data)
-    chart_loss.init_data(data)
-    chart_acc.init_data(data)
+    g.sly_charts = {
+        'lr': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLR",
+                                    title="LR", series_names=["LR"],
+                                    yrange=[0, state["lr"] + state["lr"]],
+                                    ydecimals=6, xdecimals=2),
+        'total_loss': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLoss",
+                                            title="Loss", series_names=["train", "val"],
+                                            smoothing=0.6, ydecimals=6, xdecimals=2),
+        'val_accuracy': sly.app.widgets.Chart(g.task_id, g.api, "data.chartAcc",
+                                     title="Val Acc", series_names=["avg IoU", "avg Dice"],
+                                     yrange=[0, 1],
+                                     smoothing=0.6, ydecimals=6, xdecimals=2)
+    }
+
+    for current_chart in g.sly_charts.values():
+        current_chart.init_data(data)
 
 
 def init_progress_bars(data):
-    global progress_epoch
-    progress_epoch = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressEpoch", "Epoch")
-    global progress_iter
-    progress_iter = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressIter", "Iterations (train + val)")
-    global progress_other
-    progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther", "Progress")
+    g.sly_progresses = {
+        'iter': sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressIter", "Iteration"),
+        'other': sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther", "Progress")
+    }
 
-    progress_epoch.init_data(data)
-    progress_iter.init_data(data)
-    progress_other.init_data(data)
+    for current_progress in g.sly_progresses.values():
+        current_progress.init_data(data)
 
-
-def sample_items_for_visualization(state):
-    train_set = sly.json.load_json_file(step02_splits.train_set_path)
-    val_set = sly.json.load_json_file(step02_splits.val_set_path)
-
-    train_vis_items = random.sample(train_set, state['trainVisCount'])
-    val_vis_items = random.sample(val_set, state['valVisCount'])
-
-    sly.json.dump_json_file(train_vis_items, train_vis_items_path)
-    sly.json.dump_json_file(val_vis_items, val_vis_items_path)
 
 
 def _save_link_to_ui(local_dir, app_url):
@@ -120,13 +122,12 @@ def upload_artifacts_and_log_progress(experiment_name):
             progress.set(monitor.bytes_read)
         progress.update()
 
-    global progress_other
     progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther",
                                                  "Upload directory with training artifacts to Team Files",
                                                  is_size=True, min_report_percent=5)
     progress_cb = partial(upload_monitor, api=g.api, task_id=g.task_id, progress=progress_other)
 
-    remote_dir = f"/unet/{g.task_id}_{experiment_name}"
+    remote_dir = f"/detectron2/{g.task_id}_{experiment_name}"
     res_dir = g.api.file.upload_directory(g.team_id, g.artifacts_dir, remote_dir, progress_size_cb=progress_cb)
     progress_other.reset_and_update()
     return res_dir
@@ -141,28 +142,206 @@ def calc_visualization_step(epochs):
 
     return vis_step
 
-@g.my_app.callback("train")
+
+def get_image_info(image_path):
+    im = Image.open(image_path)
+    width, height = im.size
+
+    return width, height
+
+
+def get_objects_on_image(ann, all_classes):
+    objects_on_image = []
+
+    for label in ann.labels:
+        rect = label.geometry.to_bbox()
+        curr_poly = np.asarray(label.geometry.convert(sly.Polygon)[0].exterior_np.tolist())
+        new_poly = np.asarray([point[::-1] for point in curr_poly])
+        new_poly = new_poly.ravel().tolist()
+
+        obj = {
+            "bbox": [rect.left, rect.top, rect.right, rect.bottom],
+            "bbox_mode": BoxMode.XYXY_ABS,
+            "segmentation": [new_poly],
+            "category_id": all_classes[label.obj_class.name],
+        }
+
+        objects_on_image.append(obj)
+
+    return objects_on_image
+
+
+def get_items_by_set_path(set_path):
+    files_by_datasets = {}
+    with open(set_path, 'r') as train_set_file:
+        set_list = json.load(train_set_file)
+
+        for row in set_list:
+            existing_items = files_by_datasets.get(row['dataset_name'], [])
+            existing_items.append(row['item_name'])
+            files_by_datasets[row['dataset_name']] = existing_items
+
+    return files_by_datasets
+
+
+def convertStringToNumber(s):
+    return int.from_bytes(s.encode(), 'little')
+
+
+def get_all_classes(state):
+
+    # project = sly.Project(directory=project_seg_dir_path, mode=sly.OpenMode.READ)
+    # project_meta = project.meta
+
+    # for class_index, obj_class in enumerate(project_meta.obj_classes):
+    #     g.all_classes[obj_class.name] = class_index
+    for class_index, selected_class in enumerate(state['selectedClasses']):
+        g.all_classes[selected_class] = class_index
+
+    g.all_classes["__bg__"] = len(g.all_classes)
+
+
+def convert_data_to_detectron(project_seg_dir_path, set_path):
+    dataset_dicts = []
+
+    project = sly.Project(directory=project_seg_dir_path, mode=sly.OpenMode.READ)
+    project_meta = project.meta
+
+    files_by_datasets = get_items_by_set_path(set_path=set_path)
+
+    datasets_list = project.datasets
+    for current_dataset in datasets_list:
+        current_dataset_name = current_dataset.name
+
+        items_in_dataset = files_by_datasets.get(current_dataset_name, [])
+
+        for current_item in items_in_dataset:
+            record = {
+                "file_name": current_dataset.get_item_path(current_item),
+                "image_id": convertStringToNumber(f"{set_path}_{current_dataset.get_item_path(current_item)}")
+            }
+
+            width, height = get_image_info(record["file_name"])
+            record["height"] = height
+            record["width"] = width
+
+            ann_path = current_dataset.get_ann_path(current_item)
+            ann = sly.Annotation.load_json_file(ann_path, project_meta)
+
+            record["annotations"] = get_objects_on_image(ann, g.all_classes)
+            dataset_dicts.append(record)
+
+    return dataset_dicts
+
+
+def convert_supervisely_to_segmentation(state):
+    project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
+
+    if sly.fs.dir_exists(project_dir_seg) is False:  # for debug, has no effect in production
+        sly.fs.mkdir(project_dir_seg, remove_content_if_exists=True)
+        global progress_other
+        progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther",
+                                                     "Convert SLY annotations to segmentation masks",
+                                                     sly.Project(g.project_dir, sly.OpenMode.READ).total_items)
+        sly.Project.to_segmentation_task(
+            g.project_dir, project_dir_seg,
+            target_classes=state['selectedClasses'],
+            progress_cb=progress_other.increment,
+            segmentation_type='instance'
+        )
+        progress_other.reset_and_update()
+
+    return project_dir_seg
+
+
+def configure_datasets(state, project_seg_dir_path):
+
+    get_all_classes(state)
+
+    get_train = functools.partial(convert_data_to_detectron, project_seg_dir_path=project_seg_dir_path,
+                                  set_path=step02_splits.train_set_path)
+    get_validation = functools.partial(convert_data_to_detectron, project_seg_dir_path=project_seg_dir_path,
+                                       set_path=step02_splits.val_set_path)
+
+    DatasetCatalog.register("main_train", get_train)
+    DatasetCatalog.register("main_validation", get_validation)
+
+    MetadataCatalog.get("main_train").thing_classes = list(g.all_classes.keys())
+    MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
+    print()
+
+
+def get_model_config_path(state):
+    models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
+    selected_model = next(item for item in models_by_dataset
+                          if item["Model"] == state["selectedModel"][state["pretrainedDataset"]])
+
+    if state["pretrainedDataset"] == 'COCO':
+        par_folder = 'COCO-InstanceSegmentation'
+        return os.path.join(par_folder, selected_model.get('config'))
+
+    elif state["pretrainedDataset"] == 'LVIS':
+        par_folder = 'LVISv0.5-InstanceSegmentation'
+        return os.path.join(par_folder, selected_model.get('config'))
+
+    elif state["pretrainedDataset"] == 'Cityscapes':
+        par_folder = 'Cityscapes'
+        return os.path.join(par_folder, selected_model.get('config'))
+
+
+def configure_trainer(state):
+    # static
+    cfg = get_cfg()
+
+    cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
+
+    models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
+    selected_model = next(item for item in models_by_dataset
+                          if item["Model"] == state["selectedModel"][state["pretrainedDataset"]])
+
+    cfg.merge_from_file(model_zoo.get_config_file(get_model_config_path(state)))
+    cfg.MODEL.WEIGHTS = selected_model.get('weightsUrl')
+
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(g.all_classes)
+    cfg.DATASETS.TRAIN = ("main_train",)
+    cfg.DATASETS.TEST = ("main_validation",)
+
+    # from UI — train
+    cfg.DATALOADER.NUM_WORKERS = state['numWorkers']
+    cfg.SOLVER.IMS_PER_BATCH = 2
+    cfg.SOLVER.BASE_LR = state['lr']
+    cfg.SOLVER.MAX_ITER = state['iters']
+    cfg.SOLVER.STEPS = []  # do not decay learning rate
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSize']
+    cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
+
+    # from UI — validation
+    cfg.TEST.EVAL_PERIOD = state['evalInterval']
+    cfg.TEST.VIS_PERIOD = state["visStep"]
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
+
+    return cfg
+
+
+@g.my_app.callback("previewByEpoch")
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
+def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger):
+    if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
+        index = int(state['currEpochPreview'] / state["visStep"]) - 1
+
+        gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
+        sly_plain_train_net.update_preview_by_index(index, gallery_preview)
+
+
+@g.my_app.callback("train")
+@sly.timeit
+# @g.my_app.ignore_errors_and_show_dialog_window()
 def train(api: sly.Api, task_id, context, state, app_logger):
-    calc_visualization_step(state['epochs'])
+    state['visStep'] = calc_visualization_step(state['iters'])
     try:
         # convert project to segmentation masks
-        global project_dir_seg
-        project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
-
-        if sly.fs.dir_exists(project_dir_seg) is False: # for debug, has no effect in production
-            sly.fs.mkdir(project_dir_seg, remove_content_if_exists=True)
-            global progress_other
-            progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther",
-                                                         "Convert SLY annotations to segmentation masks",
-                                                         sly.Project(g.project_dir, sly.OpenMode.READ).total_items)
-            sly.Project.to_segmentation_task(
-                g.project_dir, project_dir_seg,
-                target_classes=step03_classes.selected_classes,
-                progress_cb=progress_other.increment
-            )
-            progress_other.reset_and_update()
+        project_dir_seg = convert_supervisely_to_segmentation(state)
 
         # model classes = selected_classes + __bg__
         project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
@@ -171,21 +350,28 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         # save model classes info + classes order. Order is used to convert model predictions to correct masks for every class
         sly.json.dump_json_file(classes_json, model_classes_path)
 
-        # predictions improvement over time
-        global gallery
-        gallery = sly.app.widgets.PredictionsDynamicsGallery(g.task_id, g.api, "data.gallery", project_seg.meta)
-        gallery.complete_update()
+        g.sly_progresses['iter'].set_total(state['iters'])
+        g.sly_progresses['iter'].set(value=0, force_update=True)
 
-        sample_items_for_visualization(state)
+        # TRAIN HERE
+        # --------
+
+        configure_datasets(state, project_dir_seg)
+        # configure_datasets(state, g.project_dir)
+        cfg = configure_trainer(state)
+
+        if os.path.isdir(cfg.OUTPUT_DIR):
+            shutil.rmtree(cfg.OUTPUT_DIR)
+            os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+
+        model = build_model(cfg)
+        sly_plain_train_net.do_train(cfg=cfg, model=model)
+
+        # --------
+
+        g.sly_progresses['iter'].reset_and_update()
+
         sly.json.dump_json_file(state, os.path.join(g.info_dir, "ui_state.json"))
-
-        set_train_arguments(state)
-        import train
-        train.main()
-
-        progress_epoch.reset_and_update()
-        progress_iter.reset_and_update()
-
         remote_dir = upload_artifacts_and_log_progress(experiment_name=state["expName"])
         file_info = api.file.get_info_by_path(g.team_id, os.path.join(remote_dir, _open_lnk_name))
         api.task.set_output_directory(task_id, file_info.id, remote_dir)
@@ -203,90 +389,11 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         raise e  # app will handle this error and show modal window
 
     # stop application
-    #g.my_app.show_modal_window("Training is finished, app is still running and you can preview predictions dynamics over time."
+    # g.my_app.show_modal_window("Training is finished, app is still running and you can preview predictions dynamics over time."
     #                           "Please stop app manually once you are finished with it.")
     g.my_app.stop()
 
 
-def set_train_arguments(state):
-    # model
-    sys.argv.extend(["--model", state["selectedModel"]])
-
-    #for data loader
-    sys.argv.extend(["--project-dir", project_dir_seg])
-    sys.argv.extend(["--classes-path", model_classes_path])
-    sys.argv.extend(["--train-set-path", step02_splits.train_set_path])
-    sys.argv.extend(["--val-set-path", step02_splits.val_set_path])
-    if state["useAugs"]:
-        sys.argv.extend(["--sly-augs-path", step04_augs.augs_config_path])
-    else:
-        sys.argv.extend(["--sly-augs-path", ''])
-
-    # basic hyperparameters
-    sys.argv.extend(["--epochs", str(state["epochs"])])
-    #sys.argv.extend(["--input-size", str(state["imgSize"])])
-    sys.argv.extend(["--input-height", str(state["imgSize"]["height"])])
-    sys.argv.extend(["--input-width", str(state["imgSize"]["width"])])
-    sys.argv.extend(["--batch-size", str(state["batchSizePerGPU"])])
-
-    # # optimizer
-    sys.argv.extend(["--optimizer", state["optimizer"]])
-    sys.argv.extend(["--lr", str(state["lr"])])
-    sys.argv.extend(["--momentum", str(state["momentum"])])
-    sys.argv.extend(["--weight-decay", str(state["weightDecay"])])
-    if state["nesterov"]:
-        sys.argv.append("--nesterov")
-
-    # lr schedule
-    if state["lrPolicyEnabled"]:
-        sys.argv.extend(["--lr-schedule", state["lrSchedule"]])
-        sys.argv.extend(["--step-size", str(state["stepSize"])])
-        sys.argv.extend(["--gamma-step", str(state["gammaStep"])])
-        sys.argv.extend(["--milestones", str(state["milestones"])])
-        sys.argv.extend(["--gamma-exp", str(state["gammaExp"])])
-    else:
-        sys.argv.extend(["--lr-schedule", ''])
-
-    # system
-    sys.argv.extend(["--gpu-id", f"cuda:{state['gpusId']}"])
-    sys.argv.extend(["--num-workers", str(state['numWorkers'])])
-
-    # logging
-    sys.argv.extend(["--metrics-period", str(state['metricsPeriod'])])
-
-    # checkpoints
-    sys.argv.extend(["--val-interval", str(state['valInterval'])])
-    sys.argv.extend(["--checkpoint-interval", str(state['checkpointInterval'])])
-    if state["saveLast"]:
-        sys.argv.append("--save-last")
-    if state["saveBest"]:
-        sys.argv.append("--save-best")
-    sys.argv.extend(["--checkpoints-dir", g.checkpoints_dir])
-    if state["maxKeepCkptsEnabled"]:
-        sys.argv.extend(["--max-keep-ckpts", str(state["maxKeepCkpts"])])
-    else:
-        sys.argv.extend(["--max-keep-ckpts", str(-1)])
-
-    if state["weightsInitialization"] == "custom":
-        sys.argv.extend(["--custom-weights", step05_models.local_weights_path])
-
-    # visualization settings
-    sys.argv.extend(["--train-vis-items-path", train_vis_items_path])
-    sys.argv.extend(["--val-vis-items-path", val_vis_items_path])
-    sys.argv.append("--sly")
-
-
-@g.my_app.callback("set_gallery_time_index")
-@sly.timeit
-@g.my_app.ignore_errors_and_show_dialog_window()
-def set_gallery_time_index(api: sly.Api, task_id, context, state, app_logger):
-    try:
-        gallery.set_time_index(state["visEpoch"])
-    except Exception as e:
-        api.task.set_field(task_id, "state.setTimeIndexLoading", False)
-        raise e
-    finally:
-        api.task.set_field(task_id, "state.setTimeIndexLoading", False)
 
 
 @g.my_app.callback("stop")
@@ -299,7 +406,3 @@ def stop(api: sly.Api, task_id, context, state, app_logger):
     g.api.app.set_fields(g.task_id, fields)
 
 
-@g.my_app.callback("follow_latest_prediction")
-@sly.timeit
-def follow_latest_prediction(api: sly.Api, task_id, context, state, app_logger):
-    gallery.follow_last_time_index()

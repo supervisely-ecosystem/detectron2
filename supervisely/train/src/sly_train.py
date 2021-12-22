@@ -19,7 +19,14 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-#@TODO: check restart step for all steps
+# @TODO: AP to graphs
+# @TODO: augmentations
+# @TODO: visualization threshold param
+# @TODO: visualization GT from file
+# @TODO: checkpoints save interval
+
+
 if __name__ == "__main__":
-    #sly.main_wrapper("main", main)
-    main()
+    sly.main_wrapper("main", main)
+    # main()
+
