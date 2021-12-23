@@ -5,13 +5,26 @@
           :collapsed.sync="state.collapsed7"
           :disabled="{disabled: state.disabled7, message: 'Finish previous steps before run training'}"
 >
-    <el-button v-if="!state.done7"
-               type="primary" class="regular"
-               @click="state.started = true; command('train')"
-               :loading="state.started === true"
-    >
-        <i class="zmdi zmdi-play mr5"></i> Train
-    </el-button>
+    <div v-if="!state.done7"
+         style="display: flex; flex-direction: row; justify-content: space-between; align-items: center">
+        <el-button
+                type="primary" class="regular"
+                size="small"
+                @click="state.started = true; command('train')"
+                :loading="state.started === true"
+        >
+            <i v-if="!state.started" class="zmdi zmdi-play mr5"></i>
+            Train
+        </el-button>
+        <div v-if="state.eta" style="display: flex">
+            <div class="train-eta-style" style="background-color: #003c71">
+                {{data.progressIter.message}}: {{data.progressIter.current}} / {{data.progressIter.total}}
+            </div>
+            <span class="train-eta-style">
+                {{state.eta}}
+            </span>
+        </div>
+    </div>
     <div v-if="data.outputUrl">
         <sly-field title="Training artifacts"
                    description="Training artifacts has been uploaded to Team Files">
@@ -26,16 +39,10 @@
         </div>
     </div>
 
-    <span v-if="state.eta">
-        ETA: {{state.eta}}
-    </span>
 
+    <div v-if="data.progressIter.message && !data.outputUrl && state.eta" class="mt10">
 
-    <div v-if="data.progressIter.message && !data.outputUrl" class="mt10">
-        <div style="color: #20a0ff">
-            {{data.progressIter.message}}: {{data.progressIter.current}} / {{data.progressIter.total}}
-        </div>
-        <el-progress :percentage="data.progressIter.percent"></el-progress>
+        <el-progress :percentage="data.progressIter.percent" class="progress-text-margin"></el-progress>
     </div>
     <div v-if="data.progressOther.message && !data.outputUrl" class="mt10">
         <div style="color: #20a0ff">
@@ -45,21 +52,31 @@
     </div>
     <div class="mt15" v-if="state.started === true || state.done7">
         <hr class="mt10 mb10" style="border: 0; border-top: 1px solid rgba(0,0,0,.12);"/>
-        <sly-field title="Smoothing" description="Change the smoothing of line charts">
-            <sly-icon slot="icon" :options="{ color: '#006ad4', bgColor: '#bbe2ff', rounded: false }">
+        <sly-field title="" description="" style="align-items: center">
+            <sly-icon slot="icon" :options="{ color: '#006ad4', bgColor: '#e0f2ff', rounded: false }">
                 <i class="zmdi zmdi-trending-up"></i>
             </sly-icon>
-            <el-slider
-                    :value="state.smoothing"
-                    :min="0" :max="0.95" :step="0.05" show-input
-                    style="width: 450px;"
-                    @input="(val)=>{
+
+            <div slot="title">
+
+                <span style="font-weight: 500">
+                    Charts Smoothing
+                </span>
+                <el-slider
+                        class="el-slider-center"
+                        :value="state.smoothing"
+                        :min="0" :max="0.95" :step="0.05"
+                        style="width: 280px;"
+                        @input="(val)=>{
                                 state.smoothing = val;
                                 data.chartLoss.options.smoothingWeight = val;
-                                data.chartAcc.options.smoothingWeight = val;
+                                data.chartAP.options.smoothingWeight = val;
                             }"
-            >
-            </el-slider>
+                >
+                </el-slider>
+            </div>
+
+
         </sly-field>
 
         <sly-field title="Training charts" description="Real-time training metrics">
@@ -76,33 +93,40 @@
                 </sly-line-chart>
                 <sly-line-chart
                         style="width: 33%;"
-                        :options.sync="data.chartAcc.options"
-                        :content="data.chartAcc.series">
+                        :options.sync="data.chartAP.options"
+                        :content="data.chartAP.series">
                 </sly-line-chart>
             </div>
         </sly-field>
 
         <div class="mt10 mb10 ml10 mr10" v-if="data.previewPredLinks.length > 0">
+            <!--            {{state.currEpochPreview}}-->
+            <!--            {{state.visStep}}-->
+            <div style="display: flex; flex-direction: row;">
 
-            <div class="block">
-                <div><b>visualization epoch</b></div>
-                <el-slider
+                <div class="block">
+                    <!--                    <div><b>VISUALIZATION EPOCH {{state.currEpochPreview}}</b></div>-->
+                    <el-checkbox v-model="state.followLastPrediction"
+                    @input="{state.followLastPrediction ? [state.currEpochPreview=data.previewPredLinks.length * state.visStep] : []}">Follow Last Prediction
+                        <b style="color: dimgray">[iteration {{data.previewPredLinks.length * state.visStep}}]</b>
+                    </el-checkbox>
+                    <el-slider
+                            v-model="state.currEpochPreview"
 
-                        v-model="state.currEpochPreview"
+                            show-stops
+                            :min="state.visStep"
+                            :max="data.previewPredLinks.length * state.visStep"
+                            :step="state.visStep"
+                            :disabled="data.previewPredLinks.length < 2"
+                            @change="command('previewByEpoch')">
 
-                        show-stops
-                        :min="state.valInterval"
-                        :max="data.previewPredLinks.length * state.visStep"
-                        :step="state.visStep"
-                        :disabled="data.previewPredLinks.length < 2"
-                        @input="command('previewByEpoch')"
-
-                >
-
-                </el-slider>
+                    </el-slider>
+                </div>
             </div>
+
         </div>
         <sly-grid-gallery
+
                 class="mt10"
                 v-if="data.galleryPreview"
                 :content="data.galleryPreview.content"

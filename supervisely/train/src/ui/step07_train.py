@@ -20,6 +20,7 @@ from functools import partial
 from PIL import Image
 import shutil
 
+import sly_train_results_visualizer
 from supervisely_lib.app.widgets import CompareGallery
 
 import step02_splits
@@ -31,12 +32,10 @@ import step03_classes
 
 from itertools import groupby
 
-
 import sly_plain_train_net
 
 _open_lnk_name = "open_app.lnk"
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
-
 
 train_vis_items_path = os.path.join(g.info_dir, "train_vis_items.json")
 val_vis_items_path = os.path.join(g.info_dir, "val_vis_items.json")
@@ -57,9 +56,7 @@ def init(data, state):
     data["outputName"] = None
     data["outputUrl"] = None
 
-    state["visEpoch"] = 0
 
-    data["finishedEpoch"] = 0
     state["setTimeIndexLoading"] = False
 
     gallery_custom = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
@@ -70,6 +67,7 @@ def init(data, state):
     state["currEpochPreview"] = 1
     state["visStep"] = 0
 
+    state["followLastPrediction"] = True
 
 
 def restart(data, state):
@@ -84,13 +82,13 @@ def init_charts(data, state):
                                     title="LR", series_names=["LR"],
                                     yrange=[0, state["lr"] + state["lr"]],
                                     ydecimals=6, xdecimals=2),
-        'total_loss': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLoss",
-                                            title="Loss", series_names=["train", "val"],
+        'loss': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLoss",
+                                            title="Train Loss", series_names=["total", "mask", "box_reg"],
                                             smoothing=0.6, ydecimals=6, xdecimals=2),
-        'val_accuracy': sly.app.widgets.Chart(g.task_id, g.api, "data.chartAcc",
-                                     title="Val Acc", series_names=["(AP) @[IoU=0.50:0.95]", "(AP) @[IoU=0.50:0.95]"],
-                                     yrange=[0, 1],
-                                     smoothing=0.6, ydecimals=6, xdecimals=2)
+        'val_ap': sly.app.widgets.Chart(g.task_id, g.api, "data.chartAP",
+                                        title="Validation AP", series_names=["AP", "AP50", "AP75"],
+                                        yrange=[0, 1],
+                                        smoothing=0.6, ydecimals=6, xdecimals=2)
     }
 
     for current_chart in g.sly_charts.values():
@@ -105,7 +103,6 @@ def init_progress_bars(data):
 
     for current_progress in g.sly_progresses.values():
         current_progress.init_data(data)
-
 
 
 def _save_link_to_ui(local_dir, app_url):
@@ -137,14 +134,6 @@ def upload_artifacts_and_log_progress(experiment_name):
     return res_dir
 
 
-def calc_visualization_step(epochs):
-    total_visualizations_count = 20
-
-    vis_step = int(epochs / total_visualizations_count) \
-        if int(epochs / total_visualizations_count) > 0 else 1
-    g.api.app.set_field(g.task_id, 'state.visStep', vis_step)
-
-    return vis_step
 
 
 def get_image_info(image_path):
@@ -153,16 +142,6 @@ def get_image_info(image_path):
 
     return width, height
 
-
-
-def binary_mask_to_rle(binary_mask):
-    rle = {'counts': [], 'size': list(binary_mask.shape)}
-    counts = rle.get('counts')
-    for i, (value, elements) in enumerate(groupby(binary_mask.ravel(order='F'))):
-        if i == 0 and value == 1:
-            counts.append(0)
-        counts.append(len(list(elements)))
-    return rle
 
 
 def mask_to_image_size(label, existence_mask, img_size):
@@ -222,7 +201,6 @@ def convertStringToNumber(s):
 
 
 def get_all_classes(state):
-
     # project = sly.Project(directory=project_seg_dir_path, mode=sly.OpenMode.READ)
     # project_meta = project.meta
 
@@ -232,8 +210,6 @@ def get_all_classes(state):
         g.all_classes[selected_class] = class_index
 
     g.all_classes["__bg__"] = len(g.all_classes)
-
-
 
 
 def convert_data_to_detectron(project_seg_dir_path, set_path):
@@ -290,7 +266,6 @@ def convert_supervisely_to_segmentation(state):
 
 
 def configure_datasets(state, project_seg_dir_path):
-
     get_all_classes(state)
 
     get_train = functools.partial(convert_data_to_detectron, project_seg_dir_path=project_seg_dir_path,
@@ -303,7 +278,6 @@ def configure_datasets(state, project_seg_dir_path):
 
     MetadataCatalog.get("main_train").thing_classes = list(g.all_classes.keys())
     MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
-    print()
 
 
 def get_model_config_path(state):
@@ -354,28 +328,30 @@ def configure_trainer(state):
 
     # from UI — validation
     cfg.TEST.EVAL_PERIOD = state['evalInterval']
-    cfg.TEST.VIS_PERIOD = state["visStep"]
+    cfg.TEST.VIS_PERIOD = state['visStep']
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
 
     return cfg
 
 
 @g.my_app.callback("previewByEpoch")
+@sly.update_fields
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
-def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger):
+def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
     if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
+        # fields_to_update['state.followLastPrediction'] = False
+
         index = int(state['currEpochPreview'] / state["visStep"]) - 1
 
         gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
-        sly_plain_train_net.update_preview_by_index(index, gallery_preview)
+        sly_train_results_visualizer.update_preview_by_index(index, gallery_preview)
 
 
 @g.my_app.callback("train")
 @sly.timeit
 # @g.my_app.ignore_errors_and_show_dialog_window()
 def train(api: sly.Api, task_id, context, state, app_logger):
-    state['visStep'] = calc_visualization_step(state['iters'])
     try:
         # convert project to segmentation masks
         project_dir_seg = convert_supervisely_to_segmentation(state)
@@ -439,5 +415,3 @@ def stop(api: sly.Api, task_id, context, state, app_logger):
         {"field": "state.started", "payload": False},
     ]
     g.api.app.set_fields(g.task_id, fields)
-
-

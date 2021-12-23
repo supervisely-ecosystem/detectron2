@@ -19,11 +19,10 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# @TODO: AP to graphs
 # @TODO: augmentations
-# @TODO: visualization threshold param
 # @TODO: visualization GT from file
 # @TODO: checkpoints save interval
+# @TODO: custom classes
 
 
 if __name__ == "__main__":

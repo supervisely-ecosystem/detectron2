@@ -18,6 +18,7 @@ You may want to write your own script with your datasets and other customization
 Compared to "train_net.py", this script supports fewer default features.
 It also includes fewer abstraction, therefore is easier to add custom logic.
 """
+import copy
 import datetime
 import logging
 import os
@@ -29,7 +30,6 @@ import cv2
 import torch
 from detectron2.utils.visualizer import Visualizer
 
-from supervisely_lib.app.widgets import CompareGallery
 from torch.nn.parallel import DistributedDataParallel
 
 import detectron2.utils.comm as comm
@@ -61,186 +61,9 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 
 import supervisely_lib as sly
 import sly_globals as g
+import sly_train_results_visualizer
 
 logger = logging.getLogger("detectron2")
-
-
-def get_evaluator(cfg, dataset_name, output_folder=None):
-    """
-    Create evaluator(s) for a given dataset.
-    This uses the special metadata "evaluator_type" associated with each builtin dataset.
-    For your own dataset, you can simply create an evaluator manually in your
-    script and do not have to worry about the hacky if-else logic here.
-    """
-    if output_folder is None:
-        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-    evaluator_list = []
-    evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
-    if evaluator_type in ["sem_seg", "coco_panoptic_seg"]:
-        evaluator_list.append(
-            SemSegEvaluator(
-                dataset_name,
-                distributed=True,
-                output_dir=output_folder,
-            )
-        )
-    if evaluator_type in ["coco", "coco_panoptic_seg"]:
-        evaluator_list.append(COCOEvaluator(dataset_name, output_dir=output_folder))
-    if evaluator_type == "coco_panoptic_seg":
-        evaluator_list.append(COCOPanopticEvaluator(dataset_name, output_folder))
-    if evaluator_type == "cityscapes_instance":
-        assert (
-                torch.cuda.device_count() > comm.get_rank()
-        ), "CityscapesEvaluator currently do not work with multiple machines."
-        return CityscapesInstanceEvaluator(dataset_name)
-    if evaluator_type == "cityscapes_sem_seg":
-        assert (
-                torch.cuda.device_count() > comm.get_rank()
-        ), "CityscapesEvaluator currently do not work with multiple machines."
-        return CityscapesSemSegEvaluator(dataset_name)
-    if evaluator_type == "pascal_voc":
-        return PascalVOCDetectionEvaluator(dataset_name)
-    if evaluator_type == "lvis":
-        return LVISEvaluator(dataset_name, cfg, True, output_folder)
-    if len(evaluator_list) == 0:
-        raise NotImplementedError(
-            "no Evaluator for the dataset {} with the type {}".format(dataset_name, evaluator_type)
-        )
-    if len(evaluator_list) == 1:
-        return evaluator_list[0]
-    return DatasetEvaluators(evaluator_list)
-
-
-def do_test(cfg, model):
-    results = OrderedDict()
-
-    for dataset_name in cfg.DATASETS.TEST:
-        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
-        # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
-        #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
-
-        data_loader = build_detection_test_loader(cfg, dataset_name)
-        evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
-
-        #
-        # evaluator = get_evaluator(
-        #     cfg, dataset_name,
-        # )
-        results_i = inference_on_dataset(model, data_loader, evaluator)
-        results[dataset_name] = results_i
-        if comm.is_main_process():
-            logger.info("Evaluation results for {} in csv format:".format(dataset_name))
-
-
-
-            # g.sly_charts[''].append()
-            print_csv_format(results_i)
-    if len(results) == 1:
-        results = list(results.values())[0]
-    return results
-
-
-def visualize_results(cfg, model):
-    checkpointer = DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR)
-    checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
-
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "last_saved_model.pth")  # path to the model we just trained
-
-    test_ds_name = cfg.DATASETS.TEST[0]
-    test_ds = DatasetCatalog.get(test_ds_name)
-
-    predictor = DefaultPredictor(cfg)
-    test_metadata = MetadataCatalog.get("main_validation")
-
-    d = test_ds[0]
-    im = cv2.imread(d["file_name"])
-    outputs = predictor(im)
-    v = Visualizer(im[:, :, ::-1],
-                   metadata=test_metadata,
-                   scale=1
-                   # remove the colors of unsegmented pixels. This option is only available for segmentation models
-                   )
-
-    # out_t = v.draw_dataset_dict(d)
-    # output_image_truth = out_t.get_image()[:, :, ::-1]
-    # print()
-    out_p = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-    output_image_pred = out_p.get_image()[:, :, ::-1]
-
-    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-    output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
-
-    preview_predictions(gt_image=im, pred_image=output_image_pred)
-
-
-def do_train(cfg, model, resume=False):
-    model.train()
-    optimizer = build_optimizer(cfg, model)
-    scheduler = build_lr_scheduler(cfg, optimizer)
-
-    checkpointer = DetectionCheckpointer(
-        model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
-    )
-    start_iter = (
-            checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
-    )
-    max_iter = cfg.SOLVER.MAX_ITER
-
-    periodic_checkpointer = PeriodicCheckpointer(
-        checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter
-    )
-
-    writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
-    writers.append(SuperviselyMetricPrinter(max_iter))
-
-    # compared to "train_net.py", we do not support accurate timing and
-    # precise BN here, because they are not trivial to implement in a small training loop
-    data_loader = build_detection_train_loader(cfg,  # AUGMENTATIONS HERE
-                                               mapper=DatasetMapper(cfg, is_train=True, augmentations=[]))
-
-    logger.info("Starting training from iteration {}".format(start_iter))
-    with EventStorage(start_iter) as storage:
-        for data, iteration in zip(data_loader, range(start_iter, max_iter)):
-            storage.iter = iteration
-
-            loss_dict = model(data)
-            losses = sum(loss_dict.values())
-            assert torch.isfinite(losses).all(), loss_dict
-
-            loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
-            losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-            if comm.is_main_process():
-                storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
-
-            optimizer.zero_grad()
-            losses.backward()
-            optimizer.step()
-            storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
-            scheduler.step()
-
-            if (
-                    cfg.TEST.EVAL_PERIOD > 0
-                    and (iteration + 1) % cfg.TEST.EVAL_PERIOD == 0
-                    and iteration != max_iter - 1
-            ):
-                do_test(cfg, model)
-                # Compared to "train_net.py", the test results are not dumped to EventStorage
-                comm.synchronize()
-
-            if (
-                    cfg.TEST.VIS_PERIOD > 0
-                    and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
-                    and iteration != max_iter - 1
-            ):
-                visualize_results(cfg, model)
-                comm.synchronize()
-
-            if iteration - start_iter > 5 and (
-                    (iteration + 1) % 20 == 0 or iteration == max_iter - 1
-            ):
-                for writer in writers:
-                    writer.write()
-            periodic_checkpointer.step(iteration)
 
 
 class SuperviselyMetricPrinter(EventWriter):
@@ -315,6 +138,8 @@ class SuperviselyMetricPrinter(EventWriter):
             'eta': f"eta: {eta_string}  " if eta_string else "",
             'iter': iteration,
             'total_loss': storage.histories()['total_loss'].median(self._window_size),
+            'loss_mask': storage.histories()['loss_mask'].median(self._window_size),
+            'loss_box_reg': storage.histories()['loss_box_reg'].median(self._window_size),
             'losses': "  ".join(
                 [
                     "{}: {:.4g}".format(k, v.median(self._window_size))
@@ -339,69 +164,235 @@ class SuperviselyMetricPrinter(EventWriter):
         g.sly_progresses['iter'].set(actual_stats['iter'], force_update=True)
 
     def update_charts(self, actual_stats):
-        for key, value in actual_stats.items():
-            current_chart = g.sly_charts.get(key)
-            if current_chart is not None:
-                current_chart.append(x=actual_stats['iter'], y=actual_stats[key], series_name=None)
+        g.sly_charts['lr'].append(x=actual_stats['iter'], y=actual_stats['lr'], series_name='LR')
+        g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['total_loss'], series_name='total')
+        g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['loss_mask'], series_name='mask')
+        g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['loss_box_reg'], series_name='box_reg')
 
 
-def preview_predictions(gt_image, pred_image):
-    gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
-    append_gallery(gt_image, pred_image)
+def get_evaluator(cfg, dataset_name, output_folder=None):
+    """
+    Create evaluator(s) for a given dataset.
+    This uses the special metadata "evaluator_type" associated with each builtin dataset.
+    For your own dataset, you can simply create an evaluator manually in your
+    script and do not have to worry about the hacky if-else logic here.
+    """
+    if output_folder is None:
+        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+    evaluator_list = []
+    evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
+    if evaluator_type in ["sem_seg", "coco_panoptic_seg"]:
+        evaluator_list.append(
+            SemSegEvaluator(
+                dataset_name,
+                distributed=True,
+                output_dir=output_folder,
+            )
+        )
+    if evaluator_type in ["coco", "coco_panoptic_seg"]:
+        evaluator_list.append(COCOEvaluator(dataset_name, output_dir=output_folder))
+    if evaluator_type == "coco_panoptic_seg":
+        evaluator_list.append(COCOPanopticEvaluator(dataset_name, output_folder))
+    if evaluator_type == "cityscapes_instance":
+        assert (
+                torch.cuda.device_count() > comm.get_rank()
+        ), "CityscapesEvaluator currently do not work with multiple machines."
+        return CityscapesInstanceEvaluator(dataset_name)
+    if evaluator_type == "cityscapes_sem_seg":
+        assert (
+                torch.cuda.device_count() > comm.get_rank()
+        ), "CityscapesEvaluator currently do not work with multiple machines."
+        return CityscapesSemSegEvaluator(dataset_name)
+    if evaluator_type == "pascal_voc":
+        return PascalVOCDetectionEvaluator(dataset_name)
+    if evaluator_type == "lvis":
+        return LVISEvaluator(dataset_name, cfg, True, output_folder)
+    if len(evaluator_list) == 0:
+        raise NotImplementedError(
+            "no Evaluator for the dataset {} with the type {}".format(dataset_name, evaluator_type)
+        )
+    if len(evaluator_list) == 1:
+        return evaluator_list[0]
+    return DatasetEvaluators(evaluator_list)
 
-    update_preview_by_index(-1, gallery_preview)
+
+def do_test(cfg, model, current_iter):
+    results = OrderedDict()
+
+    for dataset_name in cfg.DATASETS.TEST:
+        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
+        # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
+        #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
+
+        data_loader = build_detection_test_loader(cfg, dataset_name)
+        evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
+
+        #
+        # evaluator = get_evaluator(
+        #     cfg, dataset_name,
+        # )
+        results_i = inference_on_dataset(model, data_loader, evaluator)
+        results[dataset_name] = results_i
+        if comm.is_main_process():
+            logger.info("Evaluation results for {} in csv format:".format(dataset_name))
+            print_csv_format(results_i)
+
+    if len(results) == 1:
+        results = list(results.values())[0]
+        segm_res = dict(dict(results).get('segm',
+                                          {}))  # contain keys: ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'AP-kiwi', 'AP-lemon', 'AP-__bg__']
+        # segm_res = res_to_vis.get('segm', {})
+
+        # updating SLY charts
+        g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP', 0) / 100), 3),
+                                      series_name='AP')  # SLY CODE
+        g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP50', 0) / 100), 3),
+                                      series_name='AP50')  # SLY CODE
+        g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP75', 0) / 100), 3),
+                                      series_name='AP75')  # SLY CODE
+
+    return results
 
 
-def update_preview_by_index(index, gallery_preview):
-    previews_links = g.api.app.get_field(g.task_id, 'data.previewPredLinks')
-    detection_threshold = 0  # g.api.app.get_field(g.task_id, 'state.detThres')
-    gt_image_link = previews_links[index][0]
-    pred_image_link = previews_links[index][1]
+def visualize_results(cfg, model):
+    checkpointer = DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR)
+    checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
 
-    gallery_preview.set_left('ground truth', gt_image_link)
-    gallery_preview.set_right(f'predicted [threshold: {detection_threshold}]',
-                              pred_image_link)
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "last_saved_model.pth")  # path to the model we just trained
 
-    gallery_preview.update(options=False)
+    test_ds_name = cfg.DATASETS.TEST[0]
+    test_ds = DatasetCatalog.get(test_ds_name)
+
+    predictor = DefaultPredictor(cfg)
+    test_metadata = MetadataCatalog.get("main_validation")
+
+    d = test_ds[0]
+    im = cv2.imread(d["file_name"])
+    outputs = predictor(im)
+    v = Visualizer(im[:, :, ::-1],
+                   metadata=test_metadata,
+                   scale=1
+                   # remove the colors of unsegmented pixels. This option is only available for segmentation models
+                   )
+
+    # out_t = v.draw_dataset_dict(d)
+    # output_image_truth = out_t.get_image()[:, :, ::-1]
+    # print()
+    out_p = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+    output_image_pred = out_p.get_image()[:, :, ::-1]
+
+    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
+
+    sly_train_results_visualizer.preview_predictions(gt_image=im, pred_image=output_image_pred)
 
 
-def save_and_upload_image(temp_image, img_type):
-    remote_preview_path = "/temp/{}_preview_segmentations.jpg"
-    local_image_path = os.path.join(g.my_app.data_dir, f"{img_type}.jpg")
-    g.sly.image.write(local_image_path, temp_image)
-    if g.api.file.exists(g.team_id, remote_preview_path.format(img_type)):
-        g.api.file.remove(g.team_id, remote_preview_path.format(img_type))
-
-    # @TODO: add ann in SLY format
-    # class_lemon = g.sly.ObjClass('lemon', g.sly.Rectangle)
-    # label_lemon = g.sly.Label(g.sly.Rectangle(200, 200, 500, 600), class_lemon)
-    #
-    # labels_arr = [label_lemon]
-    # height, width = temp_image.shape[0], temp_image.shape[1]
-    # ann = g.sly.Annotation((height, width), labels_arr)
-
-    file_info = g.api.file.upload(g.team_id, local_image_path, remote_preview_path.format(img_type))
-    return file_info
+from detectron2.data import detection_utils as utils
+import imgaug.augmenters as iaa
 
 
-def append_gallery(gt_image, pred_image):
-    file_info_gt = save_and_upload_image(gt_image, 'gt')
-    file_info_pred = save_and_upload_image(pred_image, 'pred')
+def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
+    res = augs(images=[img], bounding_boxes=boxes, segmentation_maps=masks)
+    # return image, boxes, masks
+    return res[0][0], res[1], res[2]
 
-    fields = [
-        {"field": "data.previewPredLinks",
-         "payload": [[file_info_gt.full_storage_url, file_info_pred.full_storage_url]], "append": True},
-    ]
+#
+# def mapper(dataset_dict):
+#     # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
+#     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+#     image = utils.read_image(dataset_dict["file_name"], format="BGR")
+#
+#     augmentations_config = sly.json.load_json_file(g.augs_config_path)
+#     augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
+#                                                     random_order=augmentations_config["random_order"])
+#
+#
+#     apply_augmentation(augmentations, image, )
+#
+#     dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
+#
+#     annos = [
+#         utils.transform_instance_annotations(obj, transforms, image.shape[:2])
+#         for obj in dataset_dict.pop("annotations")
+#         if obj.get("iscrowd", 0) == 0
+#     ]
+#     instances = utils.annotations_to_instances(annos, image.shape[:2])
+#     dataset_dict["instances"] = utils.filter_empty_instances(instances)
+#     return dataset_dict
 
-    g.api.app.set_fields(g.task_id, fields)
 
-    fields = [
-        {"field": "state.currEpochPreview",
-         "payload": len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) *
-                    g.api.app.get_field(g.task_id, 'state.visStep')},
-    ]
+def do_train(cfg, model, resume=False):
+    model.train()
+    optimizer = build_optimizer(cfg, model)
+    scheduler = build_lr_scheduler(cfg, optimizer)
 
-    g.api.app.set_fields(g.task_id, fields)
+    checkpointer = DetectionCheckpointer(
+        model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
+    )
+    start_iter = (
+            checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
+    )
+    max_iter = cfg.SOLVER.MAX_ITER
+
+    periodic_checkpointer = PeriodicCheckpointer(
+        checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter
+    )
+
+    writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
+    writers.append(SuperviselyMetricPrinter(max_iter))
+
+    # compared to "train_net.py", we do not support accurate timing and
+    # precise BN here, because they are not trivial to implement in a small training loop
+
+    if g.augs_config_path is not None:
+        data_loader = build_detection_train_loader(cfg,  # AUGMENTATIONS HERE
+                                                   mapper=mapper)
+    else:
+        data_loader = build_detection_train_loader(cfg)
+
+    logger.info("Starting training from iteration {}".format(start_iter))
+    with EventStorage(start_iter) as storage:
+        for data, iteration in zip(data_loader, range(start_iter, max_iter)):
+            storage.iter = iteration
+
+            loss_dict = model(data)
+            losses = sum(loss_dict.values())
+            assert torch.isfinite(losses).all(), loss_dict
+
+            loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
+            losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+            if comm.is_main_process():
+                storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
+
+            optimizer.zero_grad()
+            losses.backward()
+            optimizer.step()
+            storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
+            scheduler.step()
+
+            if (
+                    cfg.TEST.EVAL_PERIOD > 0
+                    and iteration % cfg.TEST.EVAL_PERIOD == 0
+                    and iteration != max_iter - 1
+            ):
+                do_test(cfg, model, iteration)
+                # Compared to "train_net.py", the test results are not dumped to EventStorage
+                comm.synchronize()
+
+            if (
+                    cfg.TEST.VIS_PERIOD > 0
+                    and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
+                    and iteration != max_iter - 1
+            ):
+                visualize_results(cfg, model)
+                comm.synchronize()
+
+            if iteration - start_iter > 5 and (
+                    iteration % 10 == 0 or iteration == max_iter - 1
+            ) or iteration == 0:
+                for writer in writers:
+                    writer.write()
+            periodic_checkpointer.step(iteration)
 
 # def setup(args):
 #     """

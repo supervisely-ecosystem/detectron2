@@ -52,12 +52,11 @@ sly.fs.mkdir(checkpoints_dir, remove_content_if_exists=True)  # remove content f
 visualizations_dir = os.path.join(artifacts_dir, "visualizations")
 sly.fs.mkdir(visualizations_dir, remove_content_if_exists=True)  # remove content for debug, has no effect in production
 
+augs_config_path = os.path.join(info_dir, "augs_config.json")
+
 
 sly_charts = {}
 sly_progresses = {}
 
 all_classes = {}
 
-chart_lr: sly.app.widgets.Chart = None
-chart_loss: sly.app.widgets.Chart = None
-chart_acc: sly.app.widgets.Chart = None

@@ -33,11 +33,11 @@ _custom_pipeline_path = None
 custom_pipeline = None
 gallery1: CompareGallery = None
 gallery2: CompareGallery = None
-remote_preview_path = "/temp/unet/preview_augs.jpg"
+remote_preview_path = "/temp/detectron2/preview_augs.jpg"
 
 augs_json_config = None
-augs_py_preview = None
-augs_config_path = os.path.join(g.info_dir, "augs_config.json")
+augs_py_preview = ""
+
 
 
 def _load_template(json_path):
@@ -169,13 +169,14 @@ def preview_augs(api: sly.Api, task_id, context, state, app_logger):
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
 def use_augs(api: sly.Api, task_id, context, state, app_logger):
-    global augs_config_path
-
     if state["useAugs"] is True:
-        sly.json.dump_json_file(augs_json_config, augs_config_path)
+        sly.json.dump_json_file(augs_json_config, g.augs_config_path)
         augs_py_path = os.path.join(g.info_dir, "augs_preview.py")
         with open(augs_py_path, 'w') as f:
             f.write(augs_py_preview)
+
+    else:
+        g.augs_config_path = None
 
     fields = [
         {"field": "data.done4", "payload": True},

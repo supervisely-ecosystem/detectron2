@@ -220,20 +220,14 @@
     <div style="border-left: 2px solid #ad03fc; padding: 0 12px">
         <!--        Condition ? : - is for convenient debug-->
         <!--        (IsItMuted === true) ? 'On' : 'Off';-->
-        <sly-field title="Number of train images"
-                   description="Random images from training for visualization">
-            <el-input-number v-model="state.trainVisCount"
-                             :min="0" :max="(data.trainImagesCount) ? data.trainImagesCount : 10"
+        <sly-field title="Visualizations Threshold"
+                   description="segmentation masks threshold on visualizations">
+            <el-input-number v-model="state.visThreshold"
+                             :min="0" :max="1"
                              :disabled="data.done6">
             </el-input-number>
         </sly-field>
-        <sly-field title="Number of val images"
-                   description="Random images from validation for visualization">
-            <el-input-number v-model="state.valVisCount"
-                             :min="0" :max="(data.valImagesCount) ? data.valImagesCount : 10"
-                             :disabled="data.done6">
-            </el-input-number>
-        </sly-field>
+
     </div>
 
     <el-button type="primary" class="regular"

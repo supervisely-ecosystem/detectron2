@@ -1,6 +1,6 @@
-<div id="unet-train">
+<div id="detectron2-app-train">
     <sly-style>
-        #unet-train .el-tabs.el-tabs-cards .el-radio {
+        #detectron2-app-train .el-tabs.el-tabs-cards .el-radio {
         display: flex;
         align-items: start;
         /*margin-bottom: 10px;*/
@@ -8,12 +8,12 @@
         white-space: normal;
         }
 
-        #unet-train .el-tabs.el-tabs-cards .el-radio__label div {
+        #detectron2-app-train .el-tabs.el-tabs-cards .el-radio__label div {
         color: #7f858e;
         font-size: 13px;
         }
 
-        #unet-train .el-tabs.el-tabs-cards .el-radio__label {
+        #detectron2-app-train .el-tabs.el-tabs-cards .el-radio__label {
         line-height: 17px;
         }
 
@@ -29,15 +29,15 @@
         text-align: left;
         }
 
-        #unet-train .el-tabs.el-tabs-cards { border-radius: 4px; box-shadow: none; }
-        #unet-train .el-tabs.el-tabs-cards .el-tabs__header { background-color: #f6fafd; }
-        #unet-train .el-tabs.el-tabs-cards .el-tabs__nav { float: none; display: flex; justify-content:
+        #detectron2-app-train .el-tabs.el-tabs-cards { border-radius: 4px; box-shadow: none; }
+        #detectron2-app-train .el-tabs.el-tabs-cards .el-tabs__header { background-color: #f6fafd; }
+        #detectron2-app-train .el-tabs.el-tabs-cards .el-tabs__nav { float: none; display: flex; justify-content:
         space-between; }
-        #unet-train .el-tabs.el-tabs-cards .el-tabs__item { flex: 1; margin-bottom: -3px; padding: 9px 16px
+        #detectron2-app-train .el-tabs.el-tabs-cards .el-tabs__item { flex: 1; margin-bottom: -3px; padding: 9px 16px
         13px;
         height: auto; line-height: normal; border-radius: 4px; }
 
-        #unet-train .action-icon-btn {
+        #detectron2-app-train .action-icon-btn {
         padding: 0;
         height: 22px;
         width: 22px;
@@ -46,6 +46,29 @@
         font-size: 11px;
         text-align: center;
         }
+
+        #detectron2-app-train .progress-text-margin .el-progress__text{
+        margin-left: 20px;
+        }
+
+        #detectron2-app-train .el-slider-center .el-slider__runway {
+        margin: 0 0;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        }
+
+        #detectron2-app-train .train-eta-style {
+        margin: 0 5px;
+        background: #9039bb;
+        color: white;
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 9px 18px;
+        transition: .5s box-shadow, .5s opacity, .5s background !important;
+        text-transform: uppercase;
+        font-size: 13px;
+        }
+
     </sly-style>
 
     <sly-stepper :active="state.activeStep">

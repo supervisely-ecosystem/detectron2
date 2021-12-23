@@ -14,6 +14,7 @@ def init(data, state):
     state['evalInterval'] = 10
 
 
+
     #state["imgSize"] = 256
     # state["imgSize"] = {
     #     "width": 256,
@@ -42,8 +43,8 @@ def init(data, state):
     # state["lrPolicyEnabled"] = False
 
     # visualization settings
-    state["trainVisCount"] = 1
-    state["valVisCount"] = 1
+
+    state["visThreshold"] = 0.5
 
     state["collapsed6"] = True
     state["disabled6"] = True
@@ -68,6 +69,16 @@ def check_crop_size(image_height, image_width):
     return image_height % 32 == 0 and image_width % 32 == 0
 
 
+def calc_visualization_step(iters):
+    total_visualizations_count = 20
+
+    vis_step = int(iters / total_visualizations_count) \
+        if int(iters / total_visualizations_count) > 0 else 1
+    g.api.app.set_field(g.task_id, 'state.visStep', vis_step)
+
+    return vis_step
+
+
 @g.my_app.callback("use_hyp")
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
@@ -84,8 +95,10 @@ def use_hyp(api: sly.Api, task_id, context, state, app_logger):
     #     raise ValueError('Input image sizes should be divisible by 32, but validation '
     #                      'sizes (H x W : {val_crop_height} x {val_crop_width}) '
     #                      'are not.'.format(val_crop_height=input_height, val_crop_width=input_width))
+    vis_step = calc_visualization_step(state['iters'])
 
     fields = [
+        {"field": "state.visStep", "payload": vis_step},
         {"field": "data.done6", "payload": True},
         {"field": "state.collapsed7", "payload": False},
         {"field": "state.disabled7", "payload": False},
