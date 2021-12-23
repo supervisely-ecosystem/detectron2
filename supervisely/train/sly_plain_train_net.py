@@ -131,6 +131,8 @@ def do_test(cfg, model):
         if comm.is_main_process():
             logger.info("Evaluation results for {} in csv format:".format(dataset_name))
 
+
+
             # g.sly_charts[''].append()
             print_csv_format(results_i)
     if len(results) == 1:

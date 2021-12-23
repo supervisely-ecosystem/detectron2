@@ -1,6 +1,7 @@
 import functools
 
 import numpy as np
+import pycocotools.mask
 from detectron2.structures import BoxMode
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
@@ -27,6 +28,9 @@ import step05_models
 import supervisely_lib as sly
 import sly_globals as g
 import step03_classes
+
+from itertools import groupby
+
 
 import sly_plain_train_net
 
@@ -84,7 +88,7 @@ def init_charts(data, state):
                                             title="Loss", series_names=["train", "val"],
                                             smoothing=0.6, ydecimals=6, xdecimals=2),
         'val_accuracy': sly.app.widgets.Chart(g.task_id, g.api, "data.chartAcc",
-                                     title="Val Acc", series_names=["avg IoU", "avg Dice"],
+                                     title="Val Acc", series_names=["(AP) @[IoU=0.50:0.95]", "(AP) @[IoU=0.50:0.95]"],
                                      yrange=[0, 1],
                                      smoothing=0.6, ydecimals=6, xdecimals=2)
     }
@@ -150,19 +154,48 @@ def get_image_info(image_path):
     return width, height
 
 
+
+def binary_mask_to_rle(binary_mask):
+    rle = {'counts': [], 'size': list(binary_mask.shape)}
+    counts = rle.get('counts')
+    for i, (value, elements) in enumerate(groupby(binary_mask.ravel(order='F'))):
+        if i == 0 and value == 1:
+            counts.append(0)
+        counts.append(len(list(elements)))
+    return rle
+
+
+def mask_to_image_size(label, existence_mask, img_size):
+    mask_in_images_coordinates = np.zeros(img_size, dtype=bool)  # size is (h, w)
+
+    row, column = label.geometry.origin.row, label.geometry.origin.col  # move mask to image space
+    mask_in_images_coordinates[row: row + existence_mask.shape[0], column: column + existence_mask.shape[1]] = \
+        existence_mask
+
+    return mask_in_images_coordinates
+
+
 def get_objects_on_image(ann, all_classes):
     objects_on_image = []
 
     for label in ann.labels:
         rect = label.geometry.to_bbox()
         curr_poly = np.asarray(label.geometry.convert(sly.Polygon)[0].exterior_np.tolist())
-        new_poly = np.asarray([point[::-1] for point in curr_poly])
-        new_poly = new_poly.ravel().tolist()
+        # new_poly = np.asarray([point[::-1] for point in curr_poly])
+        # new_poly = new_poly.ravel().tolist()
+
+        seg_mask = np.asarray(label.geometry.convert(sly.Bitmap)[0].data)
+        seg_mask_in_image_coords = np.asarray(mask_to_image_size(label, seg_mask, ann.img_size))
+
+        rle_seg_mask = pycocotools.mask.encode(np.asarray(seg_mask_in_image_coords, order="F"))
+        # seg_mask = binary_mask_to_rle(seg_mask)
+        # seg_mask['counts'] = counts
 
         obj = {
             "bbox": [rect.left, rect.top, rect.right, rect.bottom],
             "bbox_mode": BoxMode.XYXY_ABS,
-            "segmentation": [new_poly],
+            # "segmentation": [new_poly],
+            "segmentation": rle_seg_mask,
             "category_id": all_classes[label.obj_class.name],
         }
 
@@ -199,6 +232,8 @@ def get_all_classes(state):
         g.all_classes[selected_class] = class_index
 
     g.all_classes["__bg__"] = len(g.all_classes)
+
+
 
 
 def convert_data_to_detectron(project_seg_dir_path, set_path):
@@ -292,6 +327,8 @@ def get_model_config_path(state):
 def configure_trainer(state):
     # static
     cfg = get_cfg()
+
+    cfg.INPUT.MASK_FORMAT = 'bitmask'
 
     cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
 
@@ -392,8 +429,6 @@ def train(api: sly.Api, task_id, context, state, app_logger):
     # g.my_app.show_modal_window("Training is finished, app is still running and you can preview predictions dynamics over time."
     #                           "Please stop app manually once you are finished with it.")
     g.my_app.stop()
-
-
 
 
 @g.my_app.callback("stop")
