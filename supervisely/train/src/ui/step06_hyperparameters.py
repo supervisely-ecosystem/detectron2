@@ -12,6 +12,7 @@ def init(data, state):
     state["iters"] = 300
     state["gpusId"] = '0'
     state['evalInterval'] = 10
+    state['checkpointPeriod'] = 100
 
 
 

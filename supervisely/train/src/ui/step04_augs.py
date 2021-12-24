@@ -95,9 +95,10 @@ def init(data, state):
     data["customAugsPy"] = None
 
     global gallery1, gallery2
-    gallery1 = CompareGallery(g.task_id, g.api, "data.gallery1", g.project_meta)
+    seg_meta, _ = g.project_meta.to_segmentation_task()
+    gallery1 = CompareGallery(g.task_id, g.api, "data.gallery1", seg_meta)
     data["gallery1"] = gallery1.to_json()
-    gallery2 = CompareGallery(g.task_id, g.api, "data.gallery2", g.project_meta)
+    gallery2 = CompareGallery(g.task_id, g.api, "data.gallery2", seg_meta)
     data["gallery2"] = gallery2.to_json()
     state["collapsed4"] = True
     state["disabled4"] = True
@@ -150,12 +151,12 @@ def preview_augs(api: sly.Api, task_id, context, state, app_logger):
     dataset_fs: sly.Dataset = step01_input_project.project_fs.datasets.get(ds_name)
     img_path = dataset_fs.get_img_path(item_name)
     ann_path = dataset_fs.get_ann_path(item_name)
-    img = sly.image.read(img_path) # RGB
+    img = sly.image.read(img_path)  # RGB
     ann = sly.Annotation.load_json_file(ann_path, step01_input_project.project_fs.meta)
     ann = ann.filter_labels_by_classes(keep_classes=step03_classes.selected_classes)
 
     gallery.set_left("before", image_info.full_storage_url, ann)
-    _, res_img, res_ann = sly.imgaug_utils.apply(augs_ppl, g.project_meta, img, ann)
+    _, res_img, res_ann = sly.imgaug_utils.apply(augs_ppl, g.project_meta, img, ann, segmentation_type='instance')
     local_image_path = os.path.join(g.my_app.data_dir, "preview_augs.jpg")
     sly.image.write(local_image_path, res_img)
     if api.file.exists(g.team_id, remote_preview_path):

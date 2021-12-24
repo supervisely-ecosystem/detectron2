@@ -62,6 +62,12 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 import supervisely_lib as sly
 import sly_globals as g
 import sly_train_results_visualizer
+import sly_functions as f
+
+
+from detectron2.data import detection_utils as utils
+import imgaug.augmenters as iaa
+
 
 logger = logging.getLogger("detectron2")
 
@@ -135,7 +141,7 @@ class SuperviselyMetricPrinter(EventWriter):
             max_mem_mb = None
 
         return {
-            'eta': f"eta: {eta_string}  " if eta_string else "",
+            'eta': f"eta: {eta_string}  " if eta_string else "--:--:--",
             'iter': iteration,
             'total_loss': storage.histories()['total_loss'].median(self._window_size),
             'loss_mask': storage.histories()['loss_mask'].median(self._window_size),
@@ -254,6 +260,14 @@ def do_test(cfg, model, current_iter):
     return results
 
 
+def get_visualizer(im, dataset_meta):
+    return Visualizer(im[:, :, ::-1],
+                      metadata=dataset_meta,
+                      scale=1
+                      # remove the colors of unsegmented pixels. This option is only available for segmentation models
+                      )
+
+
 def visualize_results(cfg, model):
     checkpointer = DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR)
     checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
@@ -267,28 +281,23 @@ def visualize_results(cfg, model):
     test_metadata = MetadataCatalog.get("main_validation")
 
     d = test_ds[0]
+    # d = mapper(d)  # debug_augmentation
+
     im = cv2.imread(d["file_name"])
     outputs = predictor(im)
-    v = Visualizer(im[:, :, ::-1],
-                   metadata=test_metadata,
-                   scale=1
-                   # remove the colors of unsegmented pixels. This option is only available for segmentation models
-                   )
 
-    # out_t = v.draw_dataset_dict(d)
-    # output_image_truth = out_t.get_image()[:, :, ::-1]
-    # print()
-    out_p = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+    gt_vis = get_visualizer(im, test_metadata)
+    out_t = gt_vis.draw_dataset_dict(d)
+    output_image_truth = out_t.get_image()[:, :, ::-1]
+
+    pred_vis = get_visualizer(im, test_metadata)
+    out_p = pred_vis.draw_instance_predictions(outputs["instances"].to("cpu"))
     output_image_pred = out_p.get_image()[:, :, ::-1]
 
-    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
 
-    sly_train_results_visualizer.preview_predictions(gt_image=im, pred_image=output_image_pred)
-
-
-from detectron2.data import detection_utils as utils
-import imgaug.augmenters as iaa
+    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
 
 
 def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
@@ -296,29 +305,26 @@ def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
     # return image, boxes, masks
     return res[0][0], res[1], res[2]
 
-#
-# def mapper(dataset_dict):
-#     # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
-#     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
-#     image = utils.read_image(dataset_dict["file_name"], format="BGR")
-#
-#     augmentations_config = sly.json.load_json_file(g.augs_config_path)
-#     augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
-#                                                     random_order=augmentations_config["random_order"])
-#
-#
-#     apply_augmentation(augmentations, image, )
-#
-#     dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
-#
-#     annos = [
-#         utils.transform_instance_annotations(obj, transforms, image.shape[:2])
-#         for obj in dataset_dict.pop("annotations")
-#         if obj.get("iscrowd", 0) == 0
-#     ]
-#     instances = utils.annotations_to_instances(annos, image.shape[:2])
-#     dataset_dict["instances"] = utils.filter_empty_instances(instances)
-#     return dataset_dict
+
+def mapper(dataset_dict):
+    # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
+    dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+    image = utils.read_image(dataset_dict["file_name"], format="BGR")
+
+    augmentations_config = sly.json.load_json_file(g.augs_config_path)
+    augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
+                                                    random_order=augmentations_config["random_order"])
+    #
+    _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
+                                                 image, dataset_dict["sly_annotations"], segmentation_type='instance')
+
+    dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
+
+    annos = f.get_objects_on_image(res_ann, g.all_classes)
+
+    instances = utils.annotations_to_instances(annos, res_img.shape[:2], mask_format="bitmask")
+    dataset_dict["instances"] = utils.filter_empty_instances(instances)
+    return dataset_dict
 
 
 def do_train(cfg, model, resume=False):
@@ -387,9 +393,8 @@ def do_train(cfg, model, resume=False):
                 visualize_results(cfg, model)
                 comm.synchronize()
 
-            if iteration - start_iter > 5 and (
-                    iteration % 10 == 0 or iteration == max_iter - 1
-            ) or iteration == 0:
+            if (iteration - start_iter > 5 and (iteration % 10 == 0 or iteration == max_iter - 1)) \
+                    or iteration - start_iter == 0:
                 for writer in writers:
                     writer.write()
             periodic_checkpointer.step(iteration)

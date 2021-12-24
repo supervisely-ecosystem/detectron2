@@ -60,3 +60,6 @@ sly_progresses = {}
 
 all_classes = {}
 
+
+seg_project_meta = None
+

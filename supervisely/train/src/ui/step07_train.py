@@ -33,6 +33,7 @@ import step03_classes
 from itertools import groupby
 
 import sly_plain_train_net
+import sly_functions as f
 
 _open_lnk_name = "open_app.lnk"
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
@@ -125,7 +126,7 @@ def upload_artifacts_and_log_progress(experiment_name):
 
     progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther",
                                                  "Upload directory with training artifacts to Team Files",
-                                                 is_size=True, min_report_percent=5)
+                                                 is_size=True, min_report_percent=1)
     progress_cb = partial(upload_monitor, api=g.api, task_id=g.task_id, progress=progress_other)
 
     remote_dir = f"/detectron2/{g.task_id}_{experiment_name}"
@@ -134,53 +135,11 @@ def upload_artifacts_and_log_progress(experiment_name):
     return res_dir
 
 
-
-
 def get_image_info(image_path):
     im = Image.open(image_path)
     width, height = im.size
 
     return width, height
-
-
-
-def mask_to_image_size(label, existence_mask, img_size):
-    mask_in_images_coordinates = np.zeros(img_size, dtype=bool)  # size is (h, w)
-
-    row, column = label.geometry.origin.row, label.geometry.origin.col  # move mask to image space
-    mask_in_images_coordinates[row: row + existence_mask.shape[0], column: column + existence_mask.shape[1]] = \
-        existence_mask
-
-    return mask_in_images_coordinates
-
-
-def get_objects_on_image(ann, all_classes):
-    objects_on_image = []
-
-    for label in ann.labels:
-        rect = label.geometry.to_bbox()
-        curr_poly = np.asarray(label.geometry.convert(sly.Polygon)[0].exterior_np.tolist())
-        # new_poly = np.asarray([point[::-1] for point in curr_poly])
-        # new_poly = new_poly.ravel().tolist()
-
-        seg_mask = np.asarray(label.geometry.convert(sly.Bitmap)[0].data)
-        seg_mask_in_image_coords = np.asarray(mask_to_image_size(label, seg_mask, ann.img_size))
-
-        rle_seg_mask = pycocotools.mask.encode(np.asarray(seg_mask_in_image_coords, order="F"))
-        # seg_mask = binary_mask_to_rle(seg_mask)
-        # seg_mask['counts'] = counts
-
-        obj = {
-            "bbox": [rect.left, rect.top, rect.right, rect.bottom],
-            "bbox_mode": BoxMode.XYXY_ABS,
-            # "segmentation": [new_poly],
-            "segmentation": rle_seg_mask,
-            "category_id": all_classes[label.obj_class.name],
-        }
-
-        objects_on_image.append(obj)
-
-    return objects_on_image
 
 
 def get_items_by_set_path(set_path):
@@ -238,8 +197,11 @@ def convert_data_to_detectron(project_seg_dir_path, set_path):
 
             ann_path = current_dataset.get_ann_path(current_item)
             ann = sly.Annotation.load_json_file(ann_path, project_meta)
+            ann = ann.filter_labels_by_classes(keep_classes=step03_classes.selected_classes)
 
-            record["annotations"] = get_objects_on_image(ann, g.all_classes)
+            record["annotations"] = f.get_objects_on_image(ann, g.all_classes)
+            record["sly_annotations"] = ann
+
             dataset_dicts.append(record)
 
     return dataset_dicts
@@ -325,11 +287,12 @@ def configure_trainer(state):
     cfg.SOLVER.STEPS = []  # do not decay learning rate
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSize']
     cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
+    cfg.SOLVER.CHECKPOINT_PERIOD = state['checkpointPeriod']
 
     # from UI — validation
     cfg.TEST.EVAL_PERIOD = state['evalInterval']
     cfg.TEST.VIS_PERIOD = state['visStep']
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = state["visThreshold"]
 
     return cfg
 
@@ -358,6 +321,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
 
         # model classes = selected_classes + __bg__
         project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
+        g.seg_project_meta = project_seg.meta
         classes_json = project_seg.meta.obj_classes.to_json()
 
         # save model classes info + classes order. Order is used to convert model predictions to correct masks for every class

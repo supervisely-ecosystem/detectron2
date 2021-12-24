@@ -15,9 +15,9 @@ def preview_predictions(gt_image, pred_image):
     gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
     append_gallery(gt_image, pred_image)
 
-    # follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
-    # if follow_last_prediction:
-    #     update_preview_by_index(-1, gallery_preview)
+    follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
+    if follow_last_prediction:
+        update_preview_by_index(-1, gallery_preview)
 
 
 def update_preview_by_index(index, gallery_preview):

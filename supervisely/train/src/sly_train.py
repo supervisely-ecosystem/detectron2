@@ -19,11 +19,7 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# @TODO: augmentations
-# @TODO: visualization GT from file
-# @TODO: checkpoints save interval
-# @TODO: custom classes
-
+# @TODO: custom checkpoint loading
 
 if __name__ == "__main__":
     sly.main_wrapper("main", main)

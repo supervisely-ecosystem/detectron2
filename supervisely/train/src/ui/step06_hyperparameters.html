@@ -52,6 +52,10 @@
                    description="validate every">
             <el-input-number v-model="state.evalInterval" :min="1" :max="state.iters" :disabled="data.done6"></el-input-number>
         </sly-field>
+        <sly-field title="Save checkpoint interval"
+                   description="save model weights every">
+            <el-input-number v-model="state.checkpointPeriod" :min="0" :max="state.iters" :disabled="data.done6"></el-input-number>
+        </sly-field>
 
 
     </div>
