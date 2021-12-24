@@ -273,7 +273,7 @@ def configure_trainer(state):
                           if item["Model"] == state["selectedModel"][state["pretrainedDataset"]])
 
     cfg.merge_from_file(model_zoo.get_config_file(get_model_config_path(state)))
-    cfg.MODEL.WEIGHTS = selected_model.get('weightsUrl')
+    cfg.MODEL.WEIGHTS = g.local_weights_path
 
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(g.all_classes)
     cfg.DATASETS.TRAIN = ("main_train",)

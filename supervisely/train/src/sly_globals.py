@@ -54,6 +54,7 @@ sly.fs.mkdir(visualizations_dir, remove_content_if_exists=True)  # remove conten
 
 augs_config_path = os.path.join(info_dir, "augs_config.json")
 
+local_weights_path = None
 
 sly_charts = {}
 sly_progresses = {}

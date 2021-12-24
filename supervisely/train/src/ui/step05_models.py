@@ -199,12 +199,11 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger):
     global local_weights_path
     try:
         if state["weightsInitialization"] == "custom":
-            raise NotImplementedError
-
-            # weights_path_remote = state["weightsPath"]
-            # if not weights_path_remote.endswith(".pth"):
-            #     raise ValueError(f"Weights file has unsupported extension {sly.fs.get_file_ext(weights_path_remote)}. "
-            #                      f"Supported: '.pth'")
+            # raise NotImplementedError
+            weights_path_remote = state["weightsPath"]
+            if not weights_path_remote.endswith(".pth"):
+                raise ValueError(f"Weights file has unsupported extension {sly.fs.get_file_ext(weights_path_remote)}. "
+                                 f"Supported: '.pth'")
             #
             # # get architecture type from previous UI state
             # prev_state_path_remote = os.path.join(str(Path(weights_path_remote).parents[1]), "info/ui_state.json")
@@ -213,14 +212,14 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger):
             # prev_state = sly.json.load_json_file(prev_state_path)
             # api.task.set_field(g.task_id, "state.selectedModel", prev_state["selectedModel"])
             #
-            # local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(weights_path_remote))
-            # if sly.fs.file_exists(local_weights_path) is False:
-            #     file_info = g.api.file.get_info_by_path(g.team_id, weights_path_remote)
-            #     if file_info is None:
-            #         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), weights_path_remote)
-            #     progress5.set_total(file_info.sizeb)
-            #     g.api.file.download(g.team_id, weights_path_remote, local_weights_path, g.my_app.cache, progress5.increment)
-            #     progress5.reset_and_update()
+            g.local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(weights_path_remote))
+            if sly.fs.file_exists(g.local_weights_path) is False:
+                file_info = g.api.file.get_info_by_path(g.team_id, weights_path_remote)
+                if file_info is None:
+                    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), weights_path_remote)
+                progress5.set_total(file_info.sizeb)
+                g.api.file.download(g.team_id, weights_path_remote, g.local_weights_path, g.my_app.cache, progress5.increment)
+                progress5.reset_and_update()
         else:
             # get_pretrained_models()[state['pretrainedDataset']][]
 
@@ -232,12 +231,12 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger):
             if weights_url is not None:
                 default_pytorch_dir = "/root/.cache/torch/hub/checkpoints/"
                 # local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(weights_url))
-                local_weights_path = os.path.join(default_pytorch_dir, sly.fs.get_file_name_with_ext(weights_url))
-                if sly.fs.file_exists(local_weights_path) is False:
+                g.local_weights_path = os.path.join(default_pytorch_dir, sly.fs.get_file_name_with_ext(weights_url))
+                if sly.fs.file_exists(g.local_weights_path) is False:
                     response = requests.head(weights_url, allow_redirects=True)
                     sizeb = int(response.headers.get('content-length', 0))
                     progress5.set_total(sizeb)
-                    os.makedirs(os.path.dirname(local_weights_path), exist_ok=True)
+                    os.makedirs(os.path.dirname(g.local_weights_path), exist_ok=True)
                     sly.fs.download(weights_url, local_weights_path, g.my_app.cache, progress5.increment)
                     progress5.reset_and_update()
                 sly.logger.info("Pretrained weights has been successfully downloaded",

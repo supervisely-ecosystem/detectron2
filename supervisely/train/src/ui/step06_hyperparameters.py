@@ -6,7 +6,7 @@ import sly_globals as g
 def init(data, state):
     state["expName"] = g.project_info.name
 
-    state["numWorkers"] = 0  #@TODO: 0 - for debug
+    state["numWorkers"] = 4  #@TODO: 0 - for debug
     state["batchSize"] = 128
     state["lr"] = 0.00025
     state["iters"] = 300
