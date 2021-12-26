@@ -12,6 +12,8 @@ from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.modeling import build_model
 
+from detectron2.config import LazyConfig
+
 import json
 import os
 import sys
@@ -245,7 +247,10 @@ def configure_datasets(state, project_seg_dir_path):
 def get_model_config_path(state):
     models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
     selected_model = next(item for item in models_by_dataset
-                          if item["Model"] == state["selectedModel"][state["pretrainedDataset"]])
+                          if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
+
+    if selected_model.get('config').endswith('.py'):
+        return selected_model.get('config')
 
     if state["pretrainedDataset"] == 'COCO':
         par_folder = 'COCO-InstanceSegmentation'
@@ -262,17 +267,23 @@ def get_model_config_path(state):
 
 def configure_trainer(state):
     # static
-    cfg = get_cfg()
+    config_path = get_model_config_path(state)
+    if config_path.endswith('.py'):
+        # cfg = LazyConfig.load(config_path)
+        cfg = LazyConfig.to_py(model_zoo.get_config("COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py"))
+    else:
+        cfg = get_cfg()
+        cfg.merge_from_file(model_zoo.get_config_file(config_path))
 
     cfg.INPUT.MASK_FORMAT = 'bitmask'
 
     cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
 
-    models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
-    selected_model = next(item for item in models_by_dataset
-                          if item["Model"] == state["selectedModel"][state["pretrainedDataset"]])
-
-    cfg.merge_from_file(model_zoo.get_config_file(get_model_config_path(state)))
+    # models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
+    # selected_model = next(item for item in models_by_dataset
+    #                       if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
+    #
+    #
     cfg.MODEL.WEIGHTS = g.local_weights_path
 
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(g.all_classes)
