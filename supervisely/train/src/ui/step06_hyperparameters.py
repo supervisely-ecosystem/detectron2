@@ -1,4 +1,8 @@
 import os
+
+import yaml
+
+import step05_models
 import supervisely_lib as sly
 import sly_globals as g
 
@@ -93,6 +97,25 @@ def calc_visualization_step(iters):
     return vis_step
 
 
+def get_config_path(state):
+    models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
+    selected_model = next(item for item in models_by_dataset
+                          if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
+
+    return selected_model.get('config')
+
+
+def get_iters_num(state):
+    if state['parametersMode'] == 'basic':
+        return state['iters']
+    else:
+        config_path = get_config_path(state)
+        if config_path.endswith('.py'):
+            return state['advancedConfig']['content']['train']['max_iter']
+        else:
+            return yaml.safe_load(state['advancedConfig']['content'])['SOLVER']['MAX_ITER']
+
+
 @g.my_app.callback("use_hyp")
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
@@ -109,7 +132,7 @@ def use_hyp(api: sly.Api, task_id, context, state, app_logger):
     #     raise ValueError('Input image sizes should be divisible by 32, but validation '
     #                      'sizes (H x W : {val_crop_height} x {val_crop_width}) '
     #                      'are not.'.format(val_crop_height=input_height, val_crop_width=input_width))
-    vis_step = calc_visualization_step(state['iters'])
+    vis_step = calc_visualization_step(get_iters_num(state))
 
     fields = [
         {"field": "state.visStep", "payload": vis_step},

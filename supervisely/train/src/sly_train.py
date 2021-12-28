@@ -18,15 +18,12 @@ def main():
     g.my_app.compile_template(g.root_source_dir)
     g.my_app.run(data=data, state=state)
 
-# model arch update
-# mask-rcnn header
-# remove bg
 
-# find by id
-# original detectron
-# yaml
-# serve
+
+# test every model with py configs
+
 # table
+# serve
 
 
 #

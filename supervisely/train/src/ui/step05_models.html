@@ -1,4 +1,4 @@
-<sly-card title="Model settings"
+<sly-card title="Model settings (Mask R-CNN Instance Segmentation models)"
           subtitle="Choose model architecture and how weights should be initialized"
           :options="{collapsable: true}"
           :collapsed.sync="state.collapsed5"
@@ -67,7 +67,7 @@
                             display: flex;
                             flex-direction: column;
                             align-items: flex-start;
-                            justify-content: center;
+                            justify-content: flex-start;
                             padding: 0 35px;">
                     <sly-field title="INFO: Pretrained Models"
                                description=""
@@ -104,7 +104,7 @@
                     <a
                             style="align-self: flex-end;"
                             href="https://github.com/facebookresearch/detectron2/blob/main/MODEL_ZOO.md" target="_blank">
-                        more about models
+                        more about models<br>(find model using model id)
                     </a>
                 </div>
             </div>

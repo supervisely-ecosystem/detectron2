@@ -52,7 +52,7 @@ def init(api: sly.Api, data, state, project_id, project_meta: sly.ProjectMeta):
 def use_classes(api: sly.Api, task_id, context, state, app_logger):
     global selected_classes
     selected_classes = state["selectedClasses"]
-    selected_classes.append('__bg__')
+    # selected_classes.append('__bg__')
     fields = [
         {"field": "data.done3", "payload": True},
         {"field": "state.collapsed4", "payload": False},

@@ -18,6 +18,7 @@ def preview_predictions(gt_image, pred_image):
     follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
     if follow_last_prediction:
         update_preview_by_index(-1, gallery_preview)
+        update_metrics_table_by_by_index(-1)
 
 
 def update_preview_by_index(index, gallery_preview):
@@ -72,4 +73,20 @@ def append_gallery(gt_image, pred_image):
     follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
     if follow_last_prediction:
         g.api.app.set_fields(g.task_id, fields)
+
+
+def update_metrics_table_by_by_index(index):
+    current_results = g.metrics_for_each_epoch[index]
+
+    table_to_upload = []
+    for class_name, AP in current_results.items():
+        try:
+            table_to_upload.append({
+                'class_name': class_name[3:],
+                'AP': AP
+            })
+        except:
+            continue
+
+    g.api.app.set_field(g.task_id, 'data.metricsTable', table_to_upload)
 

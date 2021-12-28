@@ -30,6 +30,8 @@ import cv2
 import torch
 from detectron2.utils.visualizer import Visualizer
 
+from detectron2.engine.defaults import create_ddp_model
+
 from torch.nn.parallel import DistributedDataParallel
 
 import detectron2.utils.comm as comm
@@ -254,6 +256,14 @@ def do_test(cfg, model, current_iter):
         g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP75', 0) / 100), 3),
                                       series_name='AP75')  # SLY CODE
 
+        default_keys = ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl']
+        for key in default_keys:
+            if segm_res.get(key, None) is not None:
+                segm_res.pop(key)
+
+        g.metrics_for_each_epoch[current_iter + 1] = segm_res
+        g.metrics_for_each_epoch[-1] = segm_res
+
     return results
 
 
@@ -332,6 +342,7 @@ def mapper(dataset_dict):
 def do_train(cfg, resume=False):
     model = instantiate(cfg.model)
     model.train()
+    model = create_ddp_model(model, **cfg.train.ddp)
     model.to(cfg.train.device)
 
     cfg.optimizer.params.model = model
@@ -402,6 +413,7 @@ def do_train(cfg, resume=False):
                     and (iteration + 1) % cfg.test.vis_period == 0
                     and iteration != max_iter - 1
             ):
+                do_test(cfg, model, iteration)
                 visualize_results(cfg, model)
                 comm.synchronize()
 

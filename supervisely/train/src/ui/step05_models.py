@@ -67,7 +67,7 @@ def get_pretrained_models():
                 "model_id": 137849551
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml",
+                "config": "../../../configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ/42047764/model_final_bb69de.pkl",
                 "model": "R50-FPN (100)",
                 "train_time": 0.376,
@@ -293,13 +293,18 @@ def filter_lazy_config(cfg):
     return json.dumps(new_cfg, indent=4)
 
 
-def get_default_config_for_model(state):
+def get_config_path(state):
     models_by_dataset = get_pretrained_models()[state["pretrainedDataset"]]
     selected_model = next(item for item in models_by_dataset
                           if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
 
     config_path = selected_model.get('config')
 
+    return config_path
+
+
+def get_default_config_for_model(state):
+    config_path = get_config_path(state)
     if config_path.endswith('.py'):
         cfg = LazyConfig.load(config_path)
         return filter_lazy_config(cfg)
@@ -335,7 +340,7 @@ def dataset_changed(api: sly.Api, task_id, context, state, app_logger, fields_to
 def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
     # "https://download.pytorch.org/models/vgg11-8a719046.pth" to /root/.cache/torch/hub/checkpoints/vgg11-8a719046.pth
     # from train import model_list
-    fields_to_update['loadingModel'] = False
+    fields_to_update['state.loadingModel'] = False
 
     global local_weights_path
     try:
@@ -368,6 +373,12 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
                                   if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
 
             weights_url = selected_model.get('weightsUrl')
+            config_path = selected_model.get('config')
+            if config_path.endswith('.py'):
+                fields_to_update['state.advancedConfig.options.mode'] = 'ace/mode/json'
+            else:
+                fields_to_update['state.advancedConfig.options.mode'] = 'ace/mode/yaml'
+
             fields_to_update['state.advancedConfig.content'] = get_default_config_for_model(state)
 
             if weights_url is not None:

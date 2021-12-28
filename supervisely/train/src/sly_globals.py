@@ -61,6 +61,8 @@ sly_progresses = {}
 
 all_classes = {}
 
+metrics_for_each_epoch = {}
+
 
 seg_project_meta = None
 

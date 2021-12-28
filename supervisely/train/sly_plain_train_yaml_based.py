@@ -257,6 +257,14 @@ def do_test(cfg, model, current_iter):
         g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP75', 0) / 100), 3),
                                       series_name='AP75')  # SLY CODE
 
+        default_keys = ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl']
+        for key in default_keys:
+            if segm_res.get(key, None) is not None:
+                segm_res.pop(key)
+
+        g.metrics_for_each_epoch[current_iter + 1] = segm_res
+        g.metrics_for_each_epoch[-1] = segm_res
+
     return results
 
 
@@ -299,11 +307,6 @@ def visualize_results(cfg, model):
 
     sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
 
-
-def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
-    res = augs(images=[img], bounding_boxes=boxes, segmentation_maps=masks)
-    # return image, boxes, masks
-    return res[0][0], res[1], res[2]
 
 
 def mapper(dataset_dict):
@@ -391,6 +394,7 @@ def do_train(cfg, resume=False):
                     and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
                     and iteration != max_iter - 1
             ):
+                do_test(cfg, model, iteration)
                 visualize_results(cfg, model)
                 comm.synchronize()
 

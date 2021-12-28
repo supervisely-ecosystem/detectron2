@@ -107,7 +107,8 @@
                 <div class="block">
                     <!--                    <div><b>VISUALIZATION EPOCH {{state.currEpochPreview}}</b></div>-->
                     <el-checkbox v-model="state.followLastPrediction"
-                    @input="{state.followLastPrediction ? [state.currEpochPreview=data.previewPredLinks.length * state.visStep] : []}">Follow Last Prediction
+                                 @input="{state.followLastPrediction ? [state.currEpochPreview=data.previewPredLinks.length * state.visStep] : []}">
+                        Follow Last Prediction
                         <b style="color: dimgray">[iteration {{data.previewPredLinks.length * state.visStep}}]</b>
                     </el-checkbox>
                     <el-slider
@@ -126,8 +127,15 @@
             </div>
 
         </div>
-        <sly-grid-gallery
 
+        <sly-table
+                class="mt10"
+                v-if="data.metricsTable"
+                :content="data.metricsTable"
+                :options="{perPage: 10, pageSizes: 10}">
+        </sly-table>
+
+        <sly-grid-gallery
                 class="mt10"
                 v-if="data.galleryPreview"
                 :content="data.galleryPreview.content"

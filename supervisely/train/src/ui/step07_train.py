@@ -77,6 +77,9 @@ def init(data, state):
 
     state["followLastPrediction"] = True
 
+    data['metricsTable'] = None
+    data['metricsForEpochs'] = []
+
 
 def restart(data, state):
     data["done7"] = False
@@ -175,7 +178,7 @@ def get_all_classes(state):
     for class_index, selected_class in enumerate(state['selectedClasses']):
         g.all_classes[selected_class] = class_index
 
-    g.all_classes["__bg__"] = len(g.all_classes)
+    # g.all_classes["__bg__"] = len(g.all_classes)
 
 
 def convert_data_to_detectron(project_seg_dir_path, set_path):
@@ -337,7 +340,10 @@ def load_supervisely_parameters(cfg, state):
         cfg.model.roi_heads.mask_head.num_classes = len(g.all_classes)
 
         cfg.dataloader.train.mapper['instance_mask_format'] = 'bitmask'
+        cfg.dataloader.train.mapper["use_instance_mask"] = True
+
         cfg.dataloader.test.mapper['instance_mask_format'] = 'bitmask'
+        cfg.dataloader.test.mapper["use_instance_mask"] = True
 
         cfg.dataloader.train.dataset.names = "main_train"
         cfg.dataloader.test.dataset.names = "main_validation"
@@ -382,6 +388,7 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
 
         gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
         sly_train_results_visualizer.update_preview_by_index(index, gallery_preview)
+        sly_train_results_visualizer.update_metrics_table_by_by_index(state['currEpochPreview'])
 
 
 @g.my_app.callback("train")

@@ -31,20 +31,20 @@
         <el-table-column prop="areaPercent" label="Area percent" sortable width="150"></el-table-column>
     </el-table>
 
-    <sly-field title="INFO: Background Class"
-			   description="background class (name: __bg__, color: [0, 0, 0]) will be automatically added to cover"
-			   style="padding-top: 0; padding-bottom: 0; margin: 10px 5px;">
+<!--    <sly-field title="INFO: Background Class"-->
+<!--			   description="background class (name: __bg__, color: [0, 0, 0]) will be automatically added to cover"-->
+<!--			   style="padding-top: 0; padding-bottom: 0; margin: 10px 5px;">-->
 
-		<sly-icon slot="icon" :options="{ color: '#13ce66', bgColor: '#e1f7eb', rounded: false }">
-			<i class="zmdi zmdi-info"></i>
-		</sly-icon>
-	</sly-field>
+<!--		<sly-icon slot="icon" :options="{ color: '#13ce66', bgColor: '#e1f7eb', rounded: false }">-->
+<!--			<i class="zmdi zmdi-info"></i>-->
+<!--		</sly-icon>-->
+<!--	</sly-field>-->
 
     <el-button type="primary" class="regular mt10"
                @click="command('use_classes')"
                :disabled="state.selectedClasses.length < 1"
                v-if="!data.done3">
-        Use {{state.selectedClasses.length}} selected classes + BG
+        Use {{state.selectedClasses.length}} selected classes
     </el-button>
 <!--    <div v-if="state.selectedClasses.length < 1" class="mt5">-->
 <!--        <i class="zmdi zmdi-help" style="color: orange"></i> Please select at least one class for training-->
