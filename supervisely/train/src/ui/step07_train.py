@@ -64,7 +64,6 @@ def init(data, state):
     data["outputName"] = None
     data["outputUrl"] = None
 
-
     state["setTimeIndexLoading"] = False
 
     gallery_custom = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
@@ -94,8 +93,8 @@ def init_charts(data, state):
                                     yrange=[0, state["lr"] + state["lr"]],
                                     ydecimals=6, xdecimals=2),
         'loss': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLoss",
-                                            title="Train Loss", series_names=["total", "mask", "box_reg"],
-                                            smoothing=0.6, ydecimals=6, xdecimals=2),
+                                      title="Train Loss", series_names=["total", "mask", "box_reg"],
+                                      smoothing=0.6, ydecimals=6, xdecimals=2),
         'val_ap': sly.app.widgets.Chart(g.task_id, g.api, "data.chartAP",
                                         title="Validation AP", series_names=["AP", "AP50", "AP75"],
                                         yrange=[0, 1],
@@ -330,8 +329,7 @@ def set_trainer_parameters_by_advanced_config(state):
 
 
 def load_supervisely_parameters(cfg, state):
-
-    #PAUSED
+    # PAUSED
     config_path = get_config_path(state)
     if config_path.endswith('.py'):
         cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
@@ -398,13 +396,10 @@ def train(api: sly.Api, task_id, context, state, app_logger):
     try:
         # convert project to segmentation masks
         project_dir_seg = convert_supervisely_to_segmentation(state)
-
-        # model classes = selected_classes + __bg__
         project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
         g.seg_project_meta = project_seg.meta
         classes_json = project_seg.meta.obj_classes.to_json()
 
-        # save model classes info + classes order. Order is used to convert model predictions to correct masks for every class
         sly.json.dump_json_file(classes_json, model_classes_path)
 
         # TRAIN HERE
@@ -454,9 +449,10 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         raise e  # app will handle this error and show modal window
 
     # stop application
-    # g.my_app.show_modal_window("Training is finished, app is still running and you can preview predictions dynamics over time."
-    #                           "Please stop app manually once you are finished with it.")
-    g.my_app.stop()
+    g.my_app.show_modal_window(
+        "Training is finished, app is still running and you can preview predictions dynamics over time."
+        "Please stop app manually once you are finished with it.")
+    # g.my_app.stop()
 
 
 @g.my_app.callback("stop")

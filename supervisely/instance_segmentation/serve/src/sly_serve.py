@@ -6,7 +6,7 @@ import supervisely_lib as sly
 
 from detectron2.engine import DefaultPredictor
 from supervisely_lib.io.fs import get_file_name_with_ext
-from detectron2.config import get_cfg
+from detectron2.config import get_cfg, CfgNode
 from detectron2 import model_zoo
 from pathlib import Path
 import yaml
@@ -103,7 +103,7 @@ def get_output_classes_and_tags(api: sly.Api, task_id, context, state, app_logge
     my_app.send_response(request_id, data=meta.to_json())
 
 
-@my_app.callback("get_info")
+@my_app.callback("get_session_info")
 @sly.timeit
 def get_session_info(api: sly.Api, task_id, context, state, app_logger):
     info = {
@@ -136,20 +136,26 @@ def inference_image_path(image_path, context, state, app_logger):
     height, width = im.shape[:2]
     outputs = predictor(im)
     instances = outputs["instances"].to(torch.device("cpu"))
-    boxes = instances.pred_boxes if instances.has("pred_boxes") else None
+    # boxes = instances.pred_boxes if instances.has("pred_boxes") else None
+    masks = instances.pred_masks if instances.has("pred_masks") else None
     scores = instances.scores if instances.has("scores") else None
     classes = instances.pred_classes.tolist() if instances.has("pred_classes") else None
 
     labels = []
 
-    for bbox, score, curr_class_idx in zip(boxes, scores, classes):
-        top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
-        rect = sly.Rectangle(top, left, bottom, right)
-        curr_class_name = classes_str[curr_class_idx]
-        obj_class = meta.get_obj_class(curr_class_name)
-        tag = sly.Tag(meta.get_tag_meta(CONFIDENCE), round(float(score), 4))
-        label = sly.Label(rect, obj_class, sly.TagCollection([tag]))
-        labels.append(label)
+    for mask, score, curr_class_idx in zip(masks, scores, classes):
+        # top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
+        # rect = sly.Rectangle(top, left, bottom, right)
+
+        mask = mask.detach().cpu().numpy()
+        if True in mask:
+            bitmap = sly.Bitmap(mask)
+
+            curr_class_name = classes_str[curr_class_idx]
+            obj_class = meta.get_obj_class(curr_class_name)
+            tag = sly.Tag(meta.get_tag_meta(CONFIDENCE), round(float(score), 4))
+            label = sly.Label(bitmap, obj_class, sly.TagCollection([tag]))
+            labels.append(label)
 
     ann = sly.Annotation(img_size=(height, width), labels=labels)
 
@@ -213,6 +219,7 @@ def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
 
 #=================================================================================================
 
+
 def construct_model_meta(predictor):
     names = predictor.metadata.thing_classes
 
@@ -223,7 +230,7 @@ def construct_model_meta(predictor):
         for i in range(len(names)):
             colors.append(sly.color.generate_rgb(exist_colors=colors))
 
-    obj_classes = [sly.ObjClass(name, sly.Rectangle, color) for name, color in zip(names, colors)]
+    obj_classes = [sly.ObjClass(name, sly.Bitmap, color) for name, color in zip(names, colors)]
     tags = [sly.TagMeta(CONFIDENCE, sly.TagValueType.ANY_NUMBER)]
 
     meta = sly.ProjectMeta(obj_classes=sly.ObjClassCollection(obj_classes),
@@ -234,26 +241,23 @@ def construct_model_meta(predictor):
 #@my_app.callback("preprocess")
 @sly.timeit
 def preprocess():
-
     global meta, predictor
 
     progress = sly.Progress("Downloading weights", 1, is_size=True, need_info_log=True)
-    local_path = os.path.join(my_app.data_dir, curr_model_name)
+    local_path = os.path.join(my_app.data_dir, 'model.pth')
 
     if modelWeightsOptions == "pretrained":
         sly.fs.download(curr_model_url, local_path, my_app.cache, progress)
     elif modelWeightsOptions == "custom":
-        final_weights = custom_weights
-        configs = os.path.join(Path(custom_weights).parents[1], 'opt.yaml')
-        configs_local_path = os.path.join(my_app.data_dir, 'opt.yaml')
         file_info = my_app.public_api.file.get_info_by_path(TEAM_ID, custom_weights)
         progress.set(current=0, total=file_info.sizeb)
         my_app.public_api.file.download(TEAM_ID, custom_weights, local_path, my_app.cache, progress.iters_done_report)
-        my_app.public_api.file.download(TEAM_ID, configs, configs_local_path)
+        # my_app.public_api.file.download(TEAM_ID, configs, configs_local_path)
     else:
          raise ValueError("Unknown weights option {!r}".format(modelWeightsOptions))
 
     cfg = get_cfg()
+    cfg.set_new_allowed(True)
     cfg.merge_from_file(model_zoo.get_config_file(model_config))
     cfg.MODEL.WEIGHTS = local_path
 
@@ -276,8 +280,6 @@ def main():
     #my_app.run(initial_events=[{"command": "preprocess"}])
     my_app.run()
 
-
-#@TODO: !!!BBOXES TO MASKS
 
 
 #@TODO: move inference methods to SDK

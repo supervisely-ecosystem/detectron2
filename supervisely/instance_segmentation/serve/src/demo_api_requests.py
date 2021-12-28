@@ -6,10 +6,10 @@ def main():
     api = sly.Api.from_env()
 
     # task id of the deployed model
-    task_id = 12274
+    task_id = 12370
 
     # get model info
-    response = api.task.send_request(task_id, "get_info", data={}, timeout=60)
+    response = api.task.send_request(task_id, "get_session_info", data={}, timeout=1)
     print("APP returns data:")
     print(response)
 
