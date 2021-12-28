@@ -340,7 +340,7 @@ class DefaultTrainer(TrainerBase):
     1. Overwrite methods of this class, OR:
     2. Use :class:`SimpleTrainer`, which only does minimal SGD training and
        nothing else. You can then add your own hooks if needed. OR:
-    3. Write your own training loop similar to `tools/sly_plain_train_net.py`.
+    3. Write your own training loop similar to `tools/sly_plain_train_yaml_based.py`.
 
     See the :doc:`/tutorials/training` tutorials for more details.
 

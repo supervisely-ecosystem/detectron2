@@ -19,10 +19,17 @@ def main():
     g.my_app.run(data=data, state=state)
 
 # model arch update
-# serve
+# mask-rcnn header
+# remove bg
+
+# find by id
+# original detectron
 # yaml
+# serve
 # table
 
+
+#
 
 if __name__ == "__main__":
     sly.main_wrapper("main", main)

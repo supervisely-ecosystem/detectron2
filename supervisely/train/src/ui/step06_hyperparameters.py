@@ -4,9 +4,11 @@ import sly_globals as g
 
 
 def init(data, state):
+    state["parametersMode"] = 'basic'
+
     state["expName"] = g.project_info.name
 
-    state["numWorkers"] = 4  #@TODO: 0 - for debug
+    state["numWorkers"] = 4  # @TODO: 0 - for debug
     state["batchSize"] = 128
     state["lr"] = 0.00025
     state["iters"] = 300
@@ -14,9 +16,18 @@ def init(data, state):
     state['evalInterval'] = 10
     state['checkpointPeriod'] = 100
 
+    state['advancedConfig'] = {
+        "content": None,
+        "options": {
+            "height": '500px',
+            "mode": "ace/mode/json",
+            "readOnly": False,
+            "showGutter": True,
+            "highlightActiveLine": True
+        }
+    }
 
-
-    #state["imgSize"] = 256
+    # state["imgSize"] = 256
     # state["imgSize"] = {
     #     "width": 256,
     #     "height": 256,
@@ -47,8 +58,10 @@ def init(data, state):
 
     state["visThreshold"] = 0.5
 
-    state["collapsed6"] = True
-    state["disabled6"] = True
+    # state["collapsed6"] = True
+    # state["disabled6"] = True
+    state["disabled6"] = False
+    state["collapsed6"] = False
     state["done6"] = False
 
 

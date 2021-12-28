@@ -327,7 +327,8 @@ def mapper(dataset_dict):
     return dataset_dict
 
 
-def do_train(cfg, model, resume=False):
+def do_train(cfg, resume=False):
+    model = build_model(cfg)
     model.train()
     optimizer = build_optimizer(cfg, model)
     scheduler = build_lr_scheduler(cfg, optimizer)

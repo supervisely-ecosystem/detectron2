@@ -1,7 +1,13 @@
 import errno
+import json
 import os
 import requests
 from pathlib import Path
+from omegaconf import DictConfig
+
+from detectron2.config import get_cfg
+from detectron2.config import LazyConfig
+from detectron2 import model_zoo
 
 import sly_globals as g
 import supervisely_lib as sly
@@ -24,15 +30,16 @@ def init(data, state):
                               for pretrained_dataset in data["pretrainedModels"].keys()}
 
     state["weightsInitialization"] = "pretrained"  # "custom"
-    state["collapsed5"] = False
-    # state["disabled5"] = True
-    state["disabled5"] = False
+    state["collapsed5"] = not True
+    state["disabled5"] = not True
+    # state["disabled5"] = False
 
     state["loadingModel"] = False
 
     progress5.init_data(data)
 
     state["weightsPath"] = ""
+
     data["done5"] = False
 
 
@@ -40,7 +47,7 @@ def get_pretrained_models():
     return {
         "COCO": [
             {
-                "config": "mask_rcnn_R_50_C4_1x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_C4_1x/137259246/model_final_9243eb.pkl",
                 "model": "R50-C4 (1x)",
                 "train_time": 0.584,
@@ -50,7 +57,7 @@ def get_pretrained_models():
                 "model_id": 137259246
             },
             {
-                "config": "mask_rcnn_R_50_DC5_3x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x/137849551/model_final_84107b.pkl",
                 "model": "R50-DC5 (3x)",
                 "train_time": 0.470,
@@ -60,7 +67,7 @@ def get_pretrained_models():
                 "model_id": 137849551
             },
             {
-                "config": "mask_rcnn_R_50_FPN_1x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ/42047764/model_final_bb69de.pkl",
                 "model": "R50-FPN (100)",
                 "train_time": 0.376,
@@ -70,7 +77,7 @@ def get_pretrained_models():
                 "model_id": 42047764
             },
             {
-                "config": "mask_rcnn_R_50_FPN_1x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_50_FPN_400ep_LSJ/42019571/model_final_14d201.pkl",
                 "model": "R50-FPN (400)",
                 "train_time": 0.376,
@@ -80,7 +87,7 @@ def get_pretrained_models():
                 "model_id": 42019571
             },
             {
-                "config": "mask_rcnn_R_101_FPN_3x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_101_FPN_100ep_LSJ/42025812/model_final_4f7b58.pkl",
                 "model": "R101-FPN (100)",
                 "train_time": 0.376,
@@ -90,7 +97,7 @@ def get_pretrained_models():
                 "model_id": 42025812
             },
             {
-                "config": "mask_rcnn_R_101_FPN_3x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_101_FPN_400ep_LSJ/42073830/model_final_f96b26.pkl",
                 "model": "R101-FPN (400)",
                 "train_time": 0.376,
@@ -268,6 +275,39 @@ def get_table_columns():
     ]
 
 
+def remove_not_scalars_dict(d):
+    only_scalars_dict = {}
+    for k, v in d.items():
+        if isinstance(v, dict) or isinstance(v, DictConfig):
+            only_scalars_dict[k] = remove_not_scalars_dict(v)
+        elif type(v) in [float, int, str, bool, list]:
+            only_scalars_dict[k] = v
+        else:
+            continue
+
+    return only_scalars_dict
+
+
+def filter_lazy_config(cfg):
+    new_cfg = remove_not_scalars_dict(cfg)
+    return json.dumps(new_cfg, indent=4)
+
+
+def get_default_config_for_model(state):
+    models_by_dataset = get_pretrained_models()[state["pretrainedDataset"]]
+    selected_model = next(item for item in models_by_dataset
+                          if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
+
+    config_path = selected_model.get('config')
+
+    if config_path.endswith('.py'):
+        cfg = LazyConfig.load(config_path)
+        return filter_lazy_config(cfg)
+    else:
+        cfg = get_cfg()
+        cfg.merge_from_file(model_zoo.get_config_file(config_path))
+        return cfg.dump()
+
 # def get_model_info_by_name(name):
 #     models = get_models_list()
 #     for info in models:
@@ -323,12 +363,13 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
                 progress5.reset_and_update()
         else:
             # get_pretrained_models()[state['pretrainedDataset']][]
-
             models_by_dataset = get_pretrained_models()[state["pretrainedDataset"]]
             selected_model = next(item for item in models_by_dataset
                                   if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
 
             weights_url = selected_model.get('weightsUrl')
+            fields_to_update['state.advancedConfig.content'] = get_default_config_for_model(state)
+
             if weights_url is not None:
                 default_pytorch_dir = "/root/.cache/torch/hub/checkpoints/"
                 # local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(weights_url))

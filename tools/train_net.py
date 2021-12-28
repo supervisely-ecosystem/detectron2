@@ -91,7 +91,7 @@ class Trainer(DefaultTrainer):
     We use the "DefaultTrainer" which contains pre-defined default logic for
     standard training workflow. They may not work for you, especially if you
     are working on a new research project. In that case you can write your
-    own training loop. You can use "tools/sly_plain_train_net.py" as an example.
+    own training loop. You can use "tools/sly_plain_train_yaml_based.py" as an example.
     """
 
     @classmethod
@@ -145,7 +145,7 @@ def main(args):
 
     """
     If you'd like to do anything fancier than the standard training logic,
-    consider writing your own training loop (see sly_plain_train_net.py) or
+    consider writing your own training loop (see sly_plain_train_yaml_based.py) or
     subclassing the trainer.
     """
     trainer = Trainer(cfg)

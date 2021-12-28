@@ -2,6 +2,7 @@ import functools
 
 import numpy as np
 import pycocotools.mask
+import yaml
 from detectron2.structures import BoxMode
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
@@ -22,6 +23,10 @@ from functools import partial
 from PIL import Image
 import shutil
 
+from omegaconf import DictConfig
+from yacs.config import CfgNode
+
+import sly_plain_train_python_based
 import sly_train_results_visualizer
 from supervisely_lib.app.widgets import CompareGallery
 
@@ -34,7 +39,7 @@ import step03_classes
 
 from itertools import groupby
 
-import sly_plain_train_net
+import sly_plain_train_yaml_based
 import sly_functions as f
 
 _open_lnk_name = "open_app.lnk"
@@ -244,68 +249,125 @@ def configure_datasets(state, project_seg_dir_path):
     MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
 
 
-def get_model_config_path(state):
+def get_config_path(state):
     models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
     selected_model = next(item for item in models_by_dataset
                           if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
 
-    if selected_model.get('config').endswith('.py'):
-        return selected_model.get('config')
-
-    if state["pretrainedDataset"] == 'COCO':
-        par_folder = 'COCO-InstanceSegmentation'
-        return os.path.join(par_folder, selected_model.get('config'))
-
-    elif state["pretrainedDataset"] == 'LVIS':
-        par_folder = 'LVISv0.5-InstanceSegmentation'
-        return os.path.join(par_folder, selected_model.get('config'))
-
-    elif state["pretrainedDataset"] == 'Cityscapes':
-        par_folder = 'Cityscapes'
-        return os.path.join(par_folder, selected_model.get('config'))
+    return selected_model.get('config')
 
 
-def configure_trainer(state):
+def set_trainer_parameters_by_state(state):
     # static
-    config_path = get_model_config_path(state)
+    config_path = get_config_path(state)
     if config_path.endswith('.py'):
-        # cfg = LazyConfig.load(config_path)
-        cfg = LazyConfig.to_py(model_zoo.get_config("COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py"))
+        cfg = LazyConfig.load(config_path)
+
+        # from UI — train
+        cfg.dataloader.train.num_workers = state['numWorkers']
+        cfg.dataloader.test.num_workers = state['numWorkers']
+        cfg.dataloader.train.total_batch_size = state['batchSize']
+        cfg.optimizer.lr = state['lr']
+        cfg.train.max_iter = state['iters']
+
+        cfg.train.device = f'cuda:{state["gpusId"]}'
+        cfg.train.checkpointer.period = state['checkpointPeriod']
+
+        # from UI — validation
+        cfg.train.eval_period = state['evalInterval']
+        # cfg.model.roi_heads.proposal_generator.nms_thresh = state["visThreshold"]
+
     else:
         cfg = get_cfg()
         cfg.merge_from_file(model_zoo.get_config_file(config_path))
 
-    cfg.INPUT.MASK_FORMAT = 'bitmask'
+        # from UI — train
+        cfg.DATALOADER.NUM_WORKERS = state['numWorkers']
+        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.BASE_LR = state['lr']
+        cfg.SOLVER.MAX_ITER = state['iters']
+        cfg.SOLVER.STEPS = []  # do not decay learning rate
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSize']
+        cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
+        cfg.SOLVER.CHECKPOINT_PERIOD = state['checkpointPeriod']
 
-    cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
-
-    # models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
-    # selected_model = next(item for item in models_by_dataset
-    #                       if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
-    #
-    #
-    cfg.MODEL.WEIGHTS = g.local_weights_path
-
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(g.all_classes)
-    cfg.DATASETS.TRAIN = ("main_train",)
-    cfg.DATASETS.TEST = ("main_validation",)
-
-    # from UI — train
-    cfg.DATALOADER.NUM_WORKERS = state['numWorkers']
-    cfg.SOLVER.IMS_PER_BATCH = 2
-    cfg.SOLVER.BASE_LR = state['lr']
-    cfg.SOLVER.MAX_ITER = state['iters']
-    cfg.SOLVER.STEPS = []  # do not decay learning rate
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSize']
-    cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
-    cfg.SOLVER.CHECKPOINT_PERIOD = state['checkpointPeriod']
-
-    # from UI — validation
-    cfg.TEST.EVAL_PERIOD = state['evalInterval']
-    cfg.TEST.VIS_PERIOD = state['visStep']
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = state["visThreshold"]
+        # from UI — validation
+        cfg.TEST.EVAL_PERIOD = state['evalInterval']
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = state["visThreshold"]
 
     return cfg
+
+
+def update_config_by_custom(cfg, updates):
+    for k, v in updates.items():
+        if isinstance(v, dict):
+            cfg[k] = update_config_by_custom(cfg[k], v)
+        else:
+            cfg[k] = v
+
+    return cfg
+
+
+def set_trainer_parameters_by_advanced_config(state):
+    config_path = get_config_path(state)
+    config_content = state['advancedConfig']['content']
+
+    if config_path.endswith('.py'):
+        cfg = LazyConfig.load(config_path)
+        config_dict = json.loads(config_content)
+
+        cfg = update_config_by_custom(cfg, config_dict)
+
+    else:
+        cfg = get_cfg()
+        loaded_yaml = yaml.safe_load(config_content)
+        yaml_cfg = CfgNode(loaded_yaml)
+        cfg.merge_from_other_cfg(cfg_other=yaml_cfg)
+    return cfg
+
+
+def load_supervisely_parameters(cfg, state):
+
+    #PAUSED
+    config_path = get_config_path(state)
+    if config_path.endswith('.py'):
+        cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
+        cfg.train.init_checkpoint = g.local_weights_path
+
+        cfg.model.roi_heads.mask_head.num_classes = len(g.all_classes)
+
+        cfg.dataloader.train.mapper['instance_mask_format'] = 'bitmask'
+        cfg.dataloader.test.mapper['instance_mask_format'] = 'bitmask'
+
+        cfg.dataloader.train.dataset.names = "main_train"
+        cfg.dataloader.test.dataset.names = "main_validation"
+
+        cfg['test'] = DictConfig({
+            'vis_period': state['visStep']
+        })
+    else:
+        cfg.INPUT.MASK_FORMAT = 'bitmask'
+
+        cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
+        cfg.MODEL.WEIGHTS = g.local_weights_path
+
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(g.all_classes)
+        cfg.DATASETS.TRAIN = ("main_train",)
+        cfg.DATASETS.TEST = ("main_validation",)
+
+        cfg.TEST.VIS_PERIOD = state['visStep']
+
+
+def configure_trainer(state):
+    config_path = get_config_path(state)
+
+    if state['parametersMode'] == 'basic':
+        cfg = set_trainer_parameters_by_state(state)
+    else:
+        cfg = set_trainer_parameters_by_advanced_config(state)
+
+    load_supervisely_parameters(cfg, state)
+    return cfg, config_path
 
 
 @g.my_app.callback("previewByEpoch")
@@ -338,22 +400,30 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         # save model classes info + classes order. Order is used to convert model predictions to correct masks for every class
         sly.json.dump_json_file(classes_json, model_classes_path)
 
-        g.sly_progresses['iter'].set_total(state['iters'])
-        g.sly_progresses['iter'].set(value=0, force_update=True)
-
         # TRAIN HERE
         # --------
 
         configure_datasets(state, project_dir_seg)
         # configure_datasets(state, g.project_dir)
-        cfg = configure_trainer(state)
+        cfg, config_path = configure_trainer(state)
 
-        if os.path.isdir(cfg.OUTPUT_DIR):
-            shutil.rmtree(cfg.OUTPUT_DIR)
-            os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+        if config_path.endswith('.py'):
+            g.sly_progresses['iter'].set_total(cfg.train.max_iter)
+            output_dir = cfg.train.output_dir
+        else:
+            g.sly_progresses['iter'].set_total(cfg.SOLVER.MAX_ITER)
+            output_dir = cfg.OUTPUT_DIR
 
-        model = build_model(cfg)
-        sly_plain_train_net.do_train(cfg=cfg, model=model)
+        g.sly_progresses['iter'].set(value=0, force_update=True)
+
+        if os.path.isdir(output_dir):
+            shutil.rmtree(output_dir)
+            os.makedirs(output_dir, exist_ok=True)
+
+        if config_path.endswith('.py'):
+            sly_plain_train_python_based.do_train(cfg=cfg)
+        else:
+            sly_plain_train_yaml_based.do_train(cfg=cfg)
 
         # --------
 
