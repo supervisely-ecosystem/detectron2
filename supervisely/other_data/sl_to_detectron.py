@@ -27,7 +27,6 @@ for class_index, obj_class in enumerate(meta.obj_classes):
 
 
 def get_sl_dicts():
-
     project_info = api.project.get_info_by_id(project_id)
     meta_json = api.project.get_meta(project_info.id)
     meta = sly.ProjectMeta.from_json(meta_json)

@@ -16,136 +16,137 @@
         .beautiful-table { border-collapse: collapse; }
         .beautiful-table tr:nth-child(2n) { background-color: #f6f8fa; }
         .beautiful-table td, .beautiful-table th {
-            border: 1px solid #dfe2e5;
-            padding: 6px 13px;
-            text-align: center;
-            line-height: 20px;
+        border: 1px solid #dfe2e5;
+        padding: 6px 13px;
+        text-align: center;
+        line-height: 20px;
         }
 
         #detectron2-serve-model .el-tabs.el-tabs-cards { border-radius: 4px; box-shadow: none; }
         #detectron2-serve-model .el-tabs.el-tabs-cards .el-tabs__header { background-color: #f6fafd; }
         #detectron2-serve-model .el-tabs.el-tabs-cards .el-tabs__nav { float: none; display: flex; justify-content:
         space-between; }
-        #detectron2-serve-model .el-tabs.el-tabs-cards .el-tabs__item { flex: 1; margin-bottom: -3px; padding: 9px 16px 13px;
+        #detectron2-serve-model .el-tabs.el-tabs-cards .el-tabs__item { flex: 1; margin-bottom: -3px; padding: 9px 16px
+        13px;
         height: auto; line-height: normal; border-radius: 4px; }
     </sly-style>
 
-    <sly-field title="Choose model weights" description="Use custom weights or pretrained on COCO">
-        <el-tabs type="border-card" class="el-tabs-cards" v-model="state.modelWeightsOptions">
-            <el-tab-pane name="pretrained">
-                <el-radio slot="label" v-model="state.modelWeightsOptions" label="pretrained">
-                    Pretrained models
-                </el-radio>
+    <el-tabs type="border-card" class="el-tabs-cards" v-model="state.weightsInitialization">
+        <el-tab-pane name="pretrained">
+            <el-radio slot="label" v-model="state.weightsInitialization" label="pretrained">
+                Pretrained models
+                <div>weights pretrained on popular datasets</div>
+            </el-radio>
+            <div style="display: flex; flex-direction: row; width: 100%; align-items: stretch">
+                <div style="width: 50%">
 
-            <sly-field title="Dataset name:" style="margin: 0 10px 10px 0;">
-            <el-select v-model="state.dataset" placeholder="Select dataset">
-                <el-option key="COCO" label="COCO" value="COCO"></el-option>
-                <el-option key="LVIS" label="LVIS" value="LVIS"></el-option>
-                <el-option key="Cityscapes" label="Cityscapes" value="Cityscapes"></el-option>
-            </el-select>
+                    <el-select v-model="state.pretrainedDataset" class="mb10" placeholder="Select dataset">
+                        <el-option key="COCO" label="pretrained on COCO" value="COCO"></el-option>
+                        <el-option key="LVIS" label="pretrained on LVIS" value="LVIS"></el-option>
+                        <el-option key="Cityscapes" label="pretrained on Cityscapes" value="Cityscapes"></el-option>
+                        <el-option key="Others" label="others" value="Others"></el-option>
+                    </el-select>
+
+
+                    <div>
+                        <table class="beautiful-table">
+                            <thead>
+                            <tr>
+                                <th v-for="row in data.modelColumns">
+                                    <div v-html="row['title']" style="font-size: 11px"></div>
+                                    <div style="color: #7f858e; font-weight: normal; font-size: 10px;">
+                                        {{row["subtitle"]}}
+                                    </div>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr v-for="model in data.pretrainedModels[state.pretrainedDataset]">
+                                <td v-for="column in data.modelColumns">
+                                    <div v-if="column.key === 'model'" style="font-size: 10px">
+                                        <el-radio
+
+                                                class="radio" v-model="state.selectedModel[state.pretrainedDataset]"
+                                                :label="model[column.key]"
+                                                >
+                                            <div style="font-size: 11px;
+                                                        clear: both;
+                                                        display: inline-block;
+                                                        overflow: hidden;
+                                                        white-space: nowrap;">
+
+                                                {{model[column.key]}}
+                                            </div>
+                                        </el-radio>
+                                    </div>
+                                    <div v-else style="font-size: 10px">
+                                        {{model[column.key]}}
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div style="width: 50%;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: flex-start;
+                            justify-content: flex-start;
+                            padding: 0 35px;">
+                    <sly-field title="INFO: Pretrained Models"
+                               description=""
+                               style="padding-top: 0; padding-bottom: 0; margin: 10px 5px;">
+
+                <span slot="description">
+                    <b>Detectron2</b> provides us Mask R-CNN Instance Segmentation<br>
+                    baselines based on 3 different backbone combinations
+                </span>
+
+                        <sly-icon slot="icon" :options="{ color: '#13ce66', bgColor: '#e1f7eb', rounded: false }">
+                            <i class="zmdi zmdi-info"></i>
+                        </sly-icon>
+                    </sly-field>
+                    <ol style="padding-left: 22px;">
+                        <li style="margin: 10px 0;">
+                            <b>FPN:</b> Use a ResNet+FPN backbone with standard conv and FC heads for mask and box
+                            prediction,
+                            respectively. It
+                            obtains the best speed/accuracy tradeoff, but the other two are still useful for research.
+                        </li>
+                        <li style="margin: 10px 0;">
+                            <b>C4:</b> Use a ResNet conv4 backbone with conv5 head. The original baseline in the Faster
+                            R-CNN
+                            paper.
+                        </li>
+                        <li style="margin: 10px 0;">
+                            <b>DC5 (Dilated-C5):</b> Use a ResNet conv5 backbone with dilations in conv5, and standard
+                            conv and FC
+                            heads for
+                            mask and box prediction, respectively. This is used by the Deformable ConvNet paper.
+                        </li>
+                    </ol>
+                    <a
+                            style="align-self: flex-end;"
+                            href="https://github.com/facebookresearch/detectron2/blob/main/MODEL_ZOO.md"
+                            target="_blank">
+                        more about models<br>(find model using model id)
+                    </a>
+                </div>
+            </div>
+        </el-tab-pane>
+        <el-tab-pane name="custom">
+            <el-radio slot="label" v-model="state.weightsInitialization" label="custom" >
+                Custom weights
+                <div>load custom weights from Team Files</div>
+            </el-radio>
+            <sly-field title="Path to weights file" description="Copy path in Team Files">
+                <el-input v-model="state.weightsPath"
+                          placeholder="Path to .pt file in Team Files"></el-input>
             </sly-field>
+        </el-tab-pane>
+    </el-tabs>
 
-            <div v-if="state.dataset === 'COCO'">
-            <table class="beautiful-table">
-                    <thead>
-                    <tr>
-                        <th v-for="row in state.modelColumns">
-                            <div v-html="row['title']"></div>
-                            <div style="color: #7f858e; font-weight: normal; font-size: 12px;">
-                                {{row["subtitle"]}}
-                            </div>
-                        </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="model in state.modelsCOCO">
-                        <td v-for="column in state.modelColumns">
-                            <div v-if="column.key === 'Model'">
-                                <el-radio class="radio" v-model="state.selectedModel" :label="model[column.key]">
-                                    {{model[column.key]}}
-                                </el-radio>
-                            </div>
-                            <div v-else>
-                                {{model[column.key]}}
-                            </div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-              </div>
-
-            <div v-if="state.dataset === 'LVIS'">
-            <table class="beautiful-table">
-                    <thead>
-                    <tr>
-                        <th v-for="row in state.modelColumns">
-                            <div v-html="row['title']"></div>
-                            <div style="color: #7f858e; font-weight: normal; font-size: 12px;">
-                                {{row["subtitle"]}}
-                            </div>
-                        </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="model in state.modelsLVIS">
-                        <td v-for="column in state.modelColumns">
-                            <div v-if="column.key === 'Model'">
-                                <el-radio class="radio" v-model="state.selectedModel" :label="model[column.key]">
-                                    {{model[column.key]}}
-                                </el-radio>
-                            </div>
-                            <div v-else>
-                                {{model[column.key]}}
-                            </div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-              </div>
-
-
-            <div v-if="state.dataset === 'Cityscapes'">
-            <table class="beautiful-table">
-                    <thead>
-                    <tr>
-                        <th v-for="row in state.modelColumns">
-                            <div v-html="row['title']"></div>
-                            <div style="color: #7f858e; font-weight: normal; font-size: 12px;">
-                                {{row["subtitle"]}}
-                            </div>
-                        </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="model in state.modelsCityscapes">
-                        <td v-for="column in state.modelColumns">
-                            <div v-if="column.key === 'Model'">
-                                <el-radio class="radio" v-model="state.selectedModel" :label="model[column.key]">
-                                    {{model[column.key]}}
-                                </el-radio>
-                            </div>
-                            <div v-else>
-                                {{model[column.key]}}
-                            </div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-              </div>
-
-            </el-tab-pane>
-
-            <el-tab-pane name="custom">
-                <el-radio slot="label" v-model="state.modelWeightsOptions" label="custom">
-                    Custom
-                </el-radio>
-                <sly-field title="Weights path" description="Copy path in Team Files">
-                    <el-input v-model="state.weightsPath" placeholder="Path to .pt file in Team Files"></el-input>
-                </sly-field>
-            </el-tab-pane>
-
-        </el-tabs>
-    </sly-field>
     <sly-field title="Choose Device" description="Cuda device number (i.e. 0, 1, 2 or 3) or cpu">
         <el-input v-model="state.device" style="width:250px;"></el-input>
     </sly-field>

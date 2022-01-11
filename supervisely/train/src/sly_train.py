@@ -19,14 +19,8 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-
+# AP check type
 # test every model with py configs
-
-# table
-# serve
-
-
-#
 
 if __name__ == "__main__":
     sly.main_wrapper("main", main)

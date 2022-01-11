@@ -290,7 +290,8 @@ def set_trainer_parameters_by_state(state):
         cfg.SOLVER.MAX_ITER = state['iters']
         cfg.SOLVER.STEPS = []  # do not decay learning rate
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSize']
-        cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
+        cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}' if state["gpusId"].isnumeric() else 'cpu'
+        # cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
         cfg.SOLVER.CHECKPOINT_PERIOD = state['checkpointPeriod']
 
         # from UI — validation
@@ -362,6 +363,14 @@ def load_supervisely_parameters(cfg, state):
         cfg.TEST.VIS_PERIOD = state['visStep']
 
 
+def save_config_locally(cfg, config_path):
+    if config_path.endswith('.py'):
+        pass
+    else:
+        with open(os.path.join(cfg.OUTPUT_DIR, 'model_config.yaml'), 'w') as outfile:
+            yaml.dump(cfg, outfile, default_flow_style=False)
+
+
 def configure_trainer(state):
     config_path = get_config_path(state)
 
@@ -371,6 +380,7 @@ def configure_trainer(state):
         cfg = set_trainer_parameters_by_advanced_config(state)
 
     load_supervisely_parameters(cfg, state)
+
     return cfg, config_path
 
 
@@ -426,6 +436,8 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
             sly_plain_train_yaml_based.do_train(cfg=cfg)
+
+        save_config_locally(cfg, config_path)
 
         # --------
 
