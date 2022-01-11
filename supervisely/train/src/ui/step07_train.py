@@ -229,7 +229,8 @@ def convert_supervisely_to_segmentation(state):
             g.project_dir, project_dir_seg,
             target_classes=state['selectedClasses'],
             progress_cb=progress_other.increment,
-            segmentation_type='instance'
+            segmentation_type='instance',
+            add_bg_class=False
         )
         progress_other.reset_and_update()
 
@@ -269,6 +270,9 @@ def set_trainer_parameters_by_state(state):
         cfg.dataloader.train.num_workers = state['numWorkers']
         cfg.dataloader.test.num_workers = state['numWorkers']
         cfg.dataloader.train.total_batch_size = state['batchSize']
+        cfg.model.proposal_generator.batch_size_per_image = state['batchSizePerImage']
+        cfg.model.roi_heads.batch_size_per_image = state['batchSizePerImage']
+
         cfg.optimizer.lr = state['lr']
         cfg.train.max_iter = state['iters']
 
@@ -277,7 +281,8 @@ def set_trainer_parameters_by_state(state):
 
         # from UI — validation
         cfg.train.eval_period = state['evalInterval']
-        # cfg.model.roi_heads.proposal_generator.nms_thresh = state["visThreshold"]
+        cfg.model.roi_heads.box_predictor.test_score_thresh = state["visThreshold"]
+
 
     else:
         cfg = get_cfg()
@@ -285,11 +290,11 @@ def set_trainer_parameters_by_state(state):
 
         # from UI — train
         cfg.DATALOADER.NUM_WORKERS = state['numWorkers']
-        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.IMS_PER_BATCH = state['batchSize']
         cfg.SOLVER.BASE_LR = state['lr']
         cfg.SOLVER.MAX_ITER = state['iters']
         cfg.SOLVER.STEPS = []  # do not decay learning rate
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSize']
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = state['batchSizePerImage']
         cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}' if state["gpusId"].isnumeric() else 'cpu'
         # cfg.MODEL.DEVICE = f'cuda:{state["gpusId"]}'
         cfg.SOLVER.CHECKPOINT_PERIOD = state['checkpointPeriod']
@@ -330,12 +335,13 @@ def set_trainer_parameters_by_advanced_config(state):
 
 
 def load_supervisely_parameters(cfg, state):
-    # PAUSED
     config_path = get_config_path(state)
     if config_path.endswith('.py'):
         cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
         cfg.train.init_checkpoint = g.local_weights_path
 
+        cfg.model.roi_heads.num_classes = len(g.all_classes)
+        cfg.model.roi_heads.box_predictor.num_classes = len(g.all_classes)
         cfg.model.roi_heads.mask_head.num_classes = len(g.all_classes)
 
         cfg.dataloader.train.mapper['instance_mask_format'] = 'bitmask'
@@ -365,9 +371,13 @@ def load_supervisely_parameters(cfg, state):
 
 def save_config_locally(cfg, config_path):
     if config_path.endswith('.py'):
-        pass
+        output_path = os.path.join(cfg.train.output_dir, 'model_config.py')
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        LazyConfig.save(cfg, output_path)
     else:
-        with open(os.path.join(cfg.OUTPUT_DIR, 'model_config.yaml'), 'w') as outfile:
+        output_path = os.path.join(cfg.OUTPUT_DIR, 'model_config.yaml')
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, 'w') as outfile:
             yaml.dump(cfg, outfile, default_flow_style=False)
 
 
@@ -432,12 +442,12 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             shutil.rmtree(output_dir)
             os.makedirs(output_dir, exist_ok=True)
 
+        save_config_locally(cfg, config_path)
+
         if config_path.endswith('.py'):
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
             sly_plain_train_yaml_based.do_train(cfg=cfg)
-
-        save_config_locally(cfg, config_path)
 
         # --------
 

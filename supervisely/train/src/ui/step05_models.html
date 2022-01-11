@@ -5,7 +5,7 @@
           :disabled="{disabled: state.disabled5, message: 'Finish previous steps before choose NN architecture'}"
           ref="step5"
 >
-{{state.selectedModel}}
+
     <el-tabs type="border-card" class="el-tabs-cards" v-model="state.weightsInitialization">
         <el-tab-pane name="pretrained" :disabled="data.done5">
             <el-radio slot="label" v-model="state.weightsInitialization" label="pretrained" :disabled="data.done5">

@@ -1,3 +1,4 @@
+import json
 import os
 
 import yaml
@@ -13,7 +14,8 @@ def init(data, state):
     state["expName"] = g.project_info.name
 
     state["numWorkers"] = 4  # @TODO: 0 - for debug
-    state["batchSize"] = 128
+    state["batchSize"] = 2
+    state["batchSizePerImage"] = 128
     state["lr"] = 0.00025
     state["iters"] = 300
     state["gpusId"] = '0'
@@ -62,10 +64,10 @@ def init(data, state):
 
     state["visThreshold"] = 0.5
 
-    # state["collapsed6"] = True
-    # state["disabled6"] = True
-    state["disabled6"] = False
-    state["collapsed6"] = False
+    state["collapsed6"] = True
+    state["disabled6"] = True
+    # state["disabled6"] = False
+    # state["collapsed6"] = False
     state["done6"] = False
 
 
@@ -111,14 +113,14 @@ def get_iters_num(state):
     else:
         config_path = get_config_path(state)
         if config_path.endswith('.py'):
-            return state['advancedConfig']['content']['train']['max_iter']
+            return json.loads(state['advancedConfig']['content'])['train']['max_iter']
         else:
             return yaml.safe_load(state['advancedConfig']['content'])['SOLVER']['MAX_ITER']
 
 
 @g.my_app.callback("use_hyp")
 @sly.timeit
-@g.my_app.ignore_errors_and_show_dialog_window()
+# @g.my_app.ignore_errors_and_show_dialog_window()
 def use_hyp(api: sly.Api, task_id, context, state, app_logger):
     # input_height = state["imgSize"]["height"]
     # input_width = state["imgSize"]["width"]

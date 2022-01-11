@@ -348,7 +348,6 @@ def do_train(cfg, resume=False):
     cfg.optimizer.params.model = model
     optimizer = instantiate(cfg.optimizer)
 
-
     scheduler = instantiate(cfg.lr_multiplier.scheduler)
 
 
@@ -404,7 +403,10 @@ def do_train(cfg, resume=False):
                     and iteration % cfg.train.eval_period == 0
                     and iteration != max_iter - 1
             ):
-                do_test(cfg, model, iteration)
+                try:
+                    do_test(cfg, model, iteration)
+                except Exception as ex:
+                    logger.warning(f"{ex} while testing")
                 # Compared to "train_net.py", the test results are not dumped to EventStorage
                 comm.synchronize()
 
@@ -413,8 +415,11 @@ def do_train(cfg, resume=False):
                     and (iteration + 1) % cfg.test.vis_period == 0
                     and iteration != max_iter - 1
             ):
-                do_test(cfg, model, iteration)
-                visualize_results(cfg, model)
+                try:
+                    do_test(cfg, model, iteration)
+                    visualize_results(cfg, model)
+                except Exception as ex:
+                    logger.warning(f"{ex} while testing")
                 comm.synchronize()
 
             if (iteration - start_iter > 5 and (iteration % 10 == 0 or iteration == max_iter - 1)) \

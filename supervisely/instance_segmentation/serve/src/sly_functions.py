@@ -159,7 +159,7 @@ def download_model_weights():
         g.local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(g.custom_weights_url))
         download_sly_file(g.custom_weights_url, g.local_weights_path, progress)
 
-        g.model_config_local_path = os.path.join(g.my_app.data_dir, 'custom_config.yaml')
+        g.model_config_local_path = os.path.join(g.my_app.data_dir, 'model_config')
 
     else:  # download from Internet
         models_by_dataset = pretrained_models.get_pretrained_models()[g.selected_pretrained_dataset]
@@ -184,7 +184,14 @@ def download_model_weights():
 
 def get_model_config(config_path):
     if config_path.endswith('.py'):
-        cfg = LazyConfig.load(config_path)  # add custom
+        if g.weights_type == 'custom':
+            pre, ext = os.path.splitext(config_path)  # changing extention to .yaml
+            custom_config_path = pre + '.yaml'
+            os.rename(config_path, custom_config_path)
+            cfg = LazyConfig.load(custom_config_path)
+        else:
+            cfg = LazyConfig.load(model_zoo.get_config_file(config_path))
+        # add custom
     else:
         cfg = get_cfg()
         cfg.set_new_allowed(True)
@@ -211,9 +218,13 @@ def download_custom_config():
                                            min_report_percent=5)
 
     detectron_remote_dir = os.path.dirname(g.custom_weights_url)
-    config_remote_dir = os.path.join(detectron_remote_dir, 'model_config.yaml')
-    download_sly_file(config_remote_dir, g.model_config_local_path, progress)
 
+    for file_extension in ['.yaml', '.py']:
+        config_remote_dir = os.path.join(detectron_remote_dir, f'model_config{file_extension}')
+        if g.api.file.exists(g.TEAM_ID, config_remote_dir):
+            g.model_config_local_path += file_extension
+            download_sly_file(config_remote_dir, g.model_config_local_path, progress)
+            break
 
 def initialize_weights():
     if g.weights_type == 'custom':

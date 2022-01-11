@@ -30,8 +30,8 @@ def init(data, state):
                               for pretrained_dataset in data["pretrainedModels"].keys()}
 
     state["weightsInitialization"] = "pretrained"  # "custom"
-    state["collapsed5"] = not True
-    state["disabled5"] = not True
+    state["collapsed5"] = True
+    state["disabled5"] = True
     # state["disabled5"] = False
 
     state["loadingModel"] = False

@@ -2,8 +2,12 @@ import supervisely_lib as sly
 import sly_globals as g
 import ui
 
+import os
+
 
 def main():
+    # os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
     sly.logger.info("Script arguments", extra={
         "context.teamId": g.team_id,
         "context.workspaceId": g.workspace_id,
@@ -19,10 +23,14 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# AP check type
+# check AP type
 # test every model with py configs
+
+# add stop train button
+# add continue train button
+# fix upload models progress step bag
+# reset config button
 
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
-    # main()
 

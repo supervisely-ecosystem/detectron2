@@ -63,7 +63,7 @@ def get_pretrained_models():
                 "model_id": 42073830
             },
             {
-                "config": "../../../configs/COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_100ep_LSJ/42047771/model_final_b7fbab.pkl",
                 "model": "regnetx_4gf_dds_FPN (100)",
                 "train_time": 0.474,
