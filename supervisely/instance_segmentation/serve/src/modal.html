@@ -33,7 +33,7 @@
 
     <el-tabs type="border-card" class="el-tabs-cards" v-model="state.weightsInitialization">
         <el-tab-pane name="custom">
-            <el-radio slot="label" v-model="state.weightsInitialization" label="custom">
+            <el-radio slot="label" v-model="state.modelWeightsOptions" label="custom">
                 Custom weights
                 <div>load custom weights from Team Files</div>
             </el-radio>
@@ -52,7 +52,7 @@
     </sly-field>
         </el-tab-pane>
         <el-tab-pane name="pretrained" :disabled="true">
-            <el-radio slot="label" v-model="state.weightsInitialization" label="pretrained" :disabled="true">
+            <el-radio slot="label" v-model="state.modelWeightsOptions" label="pretrained" :disabled="true">
                 Pretrained models
                 <div>weights pretrained on popular datasets</div>
             </el-radio>

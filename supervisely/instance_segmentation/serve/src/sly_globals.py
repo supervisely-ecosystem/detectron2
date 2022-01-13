@@ -27,7 +27,7 @@ local_weights_path = None
 model_config_local_path = None
 
 
-device = f'cuda:{os.environ["modal.state.device"]}' if os.environ['modal.state.device'].isnumeric() else 'cpu'
+device = f'{os.environ["modal.state.device"]}' if os.environ['modal.state.device'].isnumeric() else 'cpu'
 
 weights_type = os.environ['modal.state.modelWeightsOptions']
 selected_pretrained_dataset = os.environ['modal.state.pretrainedDataset']
