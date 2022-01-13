@@ -173,7 +173,9 @@ class SuperviselyMetricPrinter(EventWriter):
         g.sly_charts['lr'].append(x=actual_stats['iter'], y=actual_stats['lr'], series_name='LR')
         g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['total_loss'], series_name='total')
         g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['loss_mask'], series_name='mask')
-        g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['loss_box_reg'], series_name='box_reg')
+
+        if actual_stats['loss_box_reg'] == actual_stats['loss_box_reg']:
+            g.sly_charts['loss'].append(x=actual_stats['iter'], y=actual_stats['loss_box_reg'], series_name='box_reg')
 
 
 def get_evaluator(cfg, dataset_name, output_folder=None):

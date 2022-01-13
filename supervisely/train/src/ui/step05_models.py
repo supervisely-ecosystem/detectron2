@@ -151,7 +151,7 @@ def get_pretrained_models():
 
         "LVIS": [
             {
-                "config": "mask_rcnn_R_50_FPN_1x.yaml",
+                "config": "LVISv0.5-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/LVISv0.5-InstanceSegmentation/mask_rcnn_R_50_FPN_1x/144219072/model_final_571f7c.pkl",
                 "model": "R50-FPN",
                 "train_time": 0.292,
@@ -161,7 +161,7 @@ def get_pretrained_models():
                 "model_id": 144219072
             },
             {
-                "config": "mask_rcnn_R_101_FPN_1x.yaml",
+                "config": "LVISv0.5-InstanceSegmentation/mask_rcnn_R_101_FPN_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/LVISv0.5-InstanceSegmentation/mask_rcnn_R_101_FPN_1x/144219035/model_final_824ab5.pkl",
                 "model": "R101-FPN",
                 "train_time": 0.371,
@@ -171,7 +171,7 @@ def get_pretrained_models():
                 "model_id": 144219035
             },
             {
-                "config": "mask_rcnn_X_101_32x8d_FPN_1x.yaml",
+                "config": "LVISv0.5-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/LVISv0.5-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_1x/144219108/model_final_5e3439.pkl",
                 "model": "X101-FPN",
                 "train_time": 0.712,
@@ -184,7 +184,7 @@ def get_pretrained_models():
 
         "Cityscapes": [
             {
-                "config": "mask_rcnn_R_50_FPN.yaml",
+                "config": "Cityscapes/mask_rcnn_R_50_FPN.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Cityscapes/mask_rcnn_R_50_FPN/142423278/model_final_af9cf5.pkl",
                 "model": "R50-FPN",
                 "train_time": 0.240,
@@ -197,7 +197,7 @@ def get_pretrained_models():
 
         "Others": [
             {
-                "config": "mask_rcnn_R_50_FPN_3x_dconv_c3-c5.yaml",
+                "config": "Misc/mask_rcnn_R_50_FPN_3x_dconv_c3-c5.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/mask_rcnn_R_50_FPN_3x_dconv_c3-c5/144998336/model_final_821d0b.pkl",
                 "model": "Deformable Conv (3x)",
                 "train_time": 0.349,
@@ -207,7 +207,7 @@ def get_pretrained_models():
                 "model_id": 144998336
             },
             {
-                "config": "cascade_mask_rcnn_R_50_FPN_3x.yaml",
+                "config": "Misc/cascade_mask_rcnn_R_50_FPN_3x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/cascade_mask_rcnn_R_50_FPN_3x/144998488/model_final_480dd8.pkl",
                 "model": "Cascade R-CNN (3x)",
                 "train_time": 0.328,
@@ -217,7 +217,7 @@ def get_pretrained_models():
                 "model_id": 144998488
             },
             {
-                "config": "mask_rcnn_R_50_FPN_3x_gn.yaml",
+                "config": "Misc/mask_rcnn_R_50_FPN_3x_gn.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/mask_rcnn_R_50_FPN_3x_gn/138602888/model_final_dc5d9e.pkl",
                 "model": "GN (3x)",
                 "train_time": 0.309,
@@ -226,28 +226,18 @@ def get_pretrained_models():
                 "mask": 38.6,
                 "model_id": 138602888
             },
+            # {
+            #     "config": "Misc/panoptic_fpn_R_101_dconv_cascade_gn_3x.yaml",
+            #     "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/panoptic_fpn_R_101_dconv_cascade_gn_3x/139797668/model_final_be35db.pkl",
+            #     "model": "Panoptic FPN R101",
+            #     "train_time": "-",
+            #     "inference_time": 0.098,
+            #     "box": 47.4,
+            #     "mask": 41.3,
+            #     "model_id": 139797668
+            # },
             {
-                "config": "mask_rcnn_R_50_FPN_3x_syncbn.yaml",
-                "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/mask_rcnn_R_50_FPN_3x_syncbn/169527823/model_final_3b3c51.pkl",
-                "model": "SyncBN (3x)",
-                "train_time": 0.345,
-                "inference_time": 0.053,
-                "box": 41.9,
-                "mask": 37.8,
-                "model_id": 169527823
-            },
-            {
-                "config": "panoptic_fpn_R_101_dconv_cascade_gn_3x.yaml",
-                "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/panoptic_fpn_R_101_dconv_cascade_gn_3x/139797668/model_final_be35db.pkl",
-                "model": "Panoptic FPN R101",
-                "train_time": "-",
-                "inference_time": 0.098,
-                "box": 47.4,
-                "mask": 41.3,
-                "model_id": 139797668
-            },
-            {
-                "config": "cascade_mask_rcnn_X_152_32x8d_FPN_IN5k_gn_dconv.yaml",
+                "config": "Misc/cascade_mask_rcnn_X_152_32x8d_FPN_IN5k_gn_dconv.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/Misc/cascade_mask_rcnn_X_152_32x8d_FPN_IN5k_gn_dconv/18131413/model_0039999_e76410.pkl",
                 "model": "Mask R-CNN X152",
                 "train_time": "-",
