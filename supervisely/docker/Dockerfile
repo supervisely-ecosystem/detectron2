@@ -2,18 +2,16 @@ FROM supervisely/base-pytorch:6.0.22
 
 
 # Install PyTorch
-RUN pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip3 install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
 
 # Install other packages
 
 
-# DETECTRON 2 for CUDA 11.1 and TORCH 1.9
-RUN pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.9/index.html
-# RUN pip install detectron2 https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.8/detectron2-0.6%2Bcu111-cp39-cp39-linux_x86_64.whl
+# DETECTRON 2 for CUDA 11.3 and TORCH 1.10
 
-# ADD "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h" skipcache
+RUN pip install detectron2 -f \
+  https://dl.fbaipublicfiles.com/detectron2/wheels/cu113/torch1.10/index.html
 
 
 RUN git clone https://github.com/supervisely-ecosystem/detectron2
-# RUN pip install -r /detectron2/requirements.txt

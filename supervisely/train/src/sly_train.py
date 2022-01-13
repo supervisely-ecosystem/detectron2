@@ -23,13 +23,13 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# check AP type
-# test every model with py configs
-
-# add stop train button
-# add continue train button
-# fix upload models progress step bag
-# reset config button
+# @TODO: test every model with py configs
+# @TODO: load custom configs
+# @TODO: add stop train button
+# @TODO: add stop train button
+# @TODO: add continue train button
+# @TODO: fix upload models progress step bag
+# @TODO: reset config button
 
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
