@@ -1,9 +1,10 @@
 {
-  "name": "Serve Detectron 2",
+  "name": "Serve Detectron2",
   "type": "app",
   "categories": [
     "neural network",
-    "detection"
+    "detection",
+    "instance segmentation"
   ],
   "description": "Deploy model as REST API service",
   "docker_image": "supervisely/detectron2:1.0.1",

@@ -1,9 +1,9 @@
 {
-  "name": "Train Detectron 2",
+  "name": "Train Detectron2",
   "type": "app",
   "categories": [
     "neural network",
-    "semantic segmentation"
+    "instance segmentation"
   ],
   "description": "Dashboard to configure, start and monitor training",
   "docker_image": "supervisely/detectron2:1.0.1",
