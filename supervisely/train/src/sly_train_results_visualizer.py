@@ -82,8 +82,8 @@ def update_metrics_table_by_by_index(index):
     for class_name, AP in current_results.items():
         try:
             table_to_upload.append({
-                'class_name': class_name[3:],
-                'AP ⬆': AP
+                'class name': class_name[3:],
+                'SEG AP [0.5:0.05:0.95] ⬆': AP
             })
         except:
             continue

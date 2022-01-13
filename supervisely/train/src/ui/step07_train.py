@@ -1,4 +1,5 @@
 import functools
+import logging
 
 import numpy as np
 import pycocotools.mask
@@ -57,7 +58,6 @@ def init(data, state):
 
     state["collapsed7"] = True
     state["disabled7"] = True
-    state["done7"] = False
 
     state["started"] = False
 
@@ -78,6 +78,8 @@ def init(data, state):
 
     data['metricsTable'] = None
     data['metricsForEpochs'] = []
+
+    data["done7"] = False
 
 
 def restart(data, state):
@@ -259,6 +261,17 @@ def get_config_path(state):
     return selected_model.get('config')
 
 
+def remove_all_multi_gpu_elements(cfg_dict):
+    for key, value in cfg_dict.items():
+        if isinstance(value, dict) or isinstance(value, DictConfig):
+            cfg_dict[key] = remove_all_multi_gpu_elements(value)
+        elif isinstance(value, str):
+            if 'Sync' in value:
+                cfg_dict[key] = value.replace('Sync', '')
+
+    return cfg_dict
+
+
 def set_trainer_parameters_by_state(state):
     # static
     config_path = get_config_path(state)
@@ -283,6 +296,8 @@ def set_trainer_parameters_by_state(state):
         cfg.train.eval_period = state['evalInterval']
         cfg.model.roi_heads.box_predictor.test_score_thresh = state["visThreshold"]
 
+        # if cuda devices == 1: turn on all multiGPU elements
+        cfg = remove_all_multi_gpu_elements(cfg)
 
     else:
         cfg = get_cfg()
@@ -431,6 +446,8 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         # configure_datasets(state, g.project_dir)
         cfg, config_path = configure_trainer(state)
 
+        sly.logger.info(f'{config_path=}')
+
         if config_path.endswith('.py'):
             g.sly_progresses['iter'].set_total(cfg.train.max_iter)
             output_dir = cfg.train.output_dir
@@ -464,7 +481,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         fields = [
             {"field": "data.outputUrl", "payload": g.api.file.get_url(file_info.id)},
             {"field": "data.outputName", "payload": remote_dir},
-            {"field": "state.done7", "payload": True},
+            {"field": "data.done7", "payload": True},
             {"field": "state.started", "payload": False},
         ]
         g.api.app.set_fields(g.task_id, fields)

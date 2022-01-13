@@ -66,9 +66,7 @@ def init(data, state):
 
     state["collapsed6"] = True
     state["disabled6"] = True
-    # state["disabled6"] = False
-    # state["collapsed6"] = False
-    state["done6"] = False
+    data["done6"] = False
 
 
 def restart(data, state):

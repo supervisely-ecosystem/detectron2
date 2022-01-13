@@ -87,7 +87,7 @@ def get_pretrained_models():
                 "model_id": 42019571
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
+                "config": "new_baselines/mask_rcnn_R_101_FPN_100ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_101_FPN_100ep_LSJ/42025812/model_final_4f7b58.pkl",
                 "model": "R101-FPN (100)",
                 "train_time": 0.376,
@@ -97,7 +97,7 @@ def get_pretrained_models():
                 "model_id": 42025812
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
+                "config": "new_baselines/mask_rcnn_R_101_FPN_400ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_101_FPN_400ep_LSJ/42073830/model_final_f96b26.pkl",
                 "model": "R101-FPN (400)",
                 "train_time": 0.376,
@@ -107,7 +107,7 @@ def get_pretrained_models():
                 "model_id": 42073830
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py",
+                "config": "new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_100ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_100ep_LSJ/42047771/model_final_b7fbab.pkl",
                 "model": "regnetx_4gf_dds_FPN (100)",
                 "train_time": 0.474,
@@ -117,7 +117,7 @@ def get_pretrained_models():
                 "model_id": 42047771
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.yaml",
+                "config": "new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ/42025447/model_final_f1362d.pkl",
                 "model": "regnetx_4gf_dds_FPN (400)",
                 "train_time": 0.474,
@@ -127,7 +127,7 @@ def get_pretrained_models():
                 "model_id": 42025447
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_regnety_4gf_dds_fpn_1x.yaml",
+                "config": "new_baselines/mask_rcnn_regnety_4gf_dds_FPN_100ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnety_4gf_dds_FPN_100ep_LSJ/42047784/model_final_6ba57e.pkl",
                 "model": "regnety_4gf_dds_FPN (100)",
                 "train_time": 0.487,
@@ -137,7 +137,7 @@ def get_pretrained_models():
                 "model_id": 42047784
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_regnety_4gf_dds_fpn_1x.yaml",
+                "config": "new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ/42045954/model_final_ef3a80.pkl",
                 "model": "regnety_4gf_dds_FPN (400)",
                 "train_time": 0.487,

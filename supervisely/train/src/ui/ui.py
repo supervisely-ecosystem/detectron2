@@ -55,6 +55,11 @@ def restart(api: sly.Api, task_id, context, state, app_logger):
             step06_hyperparameters.restart(data, state)
         else:
             step06_hyperparameters.init(data, state)
+    if restart_from_step <= 7:
+        if restart_from_step == 7:
+            raise NotImplementedError
+        else:
+            step07_train.init(data, state)
 
     fields = [
         {"field": "data", "payload": data, "append": True, "recursive": False},
