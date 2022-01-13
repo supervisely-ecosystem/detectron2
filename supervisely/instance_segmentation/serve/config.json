@@ -13,7 +13,7 @@
   "modal_width": 700,
   "modal_template_state": {
     "modelWeightsOptions": "pretrained",
-    "device": "0",
+    "device": "cuda:0",
     "weightsPath": "",
     "modelsCOCO": [
         {
