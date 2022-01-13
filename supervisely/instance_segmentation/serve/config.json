@@ -13,6 +13,8 @@
   "modal_width": 700,
   "modal_template_state": {
     "modelWeightsOptions": "custom",
+    "pretrainedDataset": "COCO",
+    "selectedModel": "{}",
     "device": "cuda:0",
     "weightsPath": "",
     "modelsCOCO": [

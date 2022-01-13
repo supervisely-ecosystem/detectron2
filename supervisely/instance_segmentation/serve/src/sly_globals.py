@@ -30,6 +30,7 @@ model_config_local_path = None
 device = f'{os.environ["modal.state.device"]}' if os.environ['modal.state.device'].isnumeric() else 'cpu'
 
 weights_type = os.environ['modal.state.modelWeightsOptions']
+
 selected_pretrained_dataset = os.environ['modal.state.pretrainedDataset']
 selected_model = json.loads(os.environ['modal.state.selectedModel'])
 
