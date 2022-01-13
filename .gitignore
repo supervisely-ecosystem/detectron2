@@ -6,7 +6,7 @@ supervisely_lib
 
 
 *.png
-*.json
+#*.json
 *.diff
 *.jpg
 !/projects/DensePose/doc/images/*.jpg
