@@ -229,7 +229,7 @@ def convert_supervisely_to_segmentation(state):
             g.project_dir, project_dir_seg,
             target_classes=state['selectedClasses'],
             progress_cb=progress_other.increment,
-            seg_type='instance'
+            segmentation_type='instance'
         )
         progress_other.reset_and_update()
 
