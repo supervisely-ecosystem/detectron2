@@ -10,6 +10,7 @@
   "main_script": "supervisely/train/src/sly_train.py",
   "gui_template": "supervisely/train/src/gui.html",
   "task_location": "workspace_tasks",
+  "icon": "https://imgur.com/dv6O8cy.png",
   "icon_background": "#FFFFFF",
   "icon_cover": false,
   "isolate": true,
