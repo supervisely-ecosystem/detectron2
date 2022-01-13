@@ -206,7 +206,7 @@ def convert_data_to_detectron(project_seg_dir_path, set_path):
 
             ann_path = current_dataset.get_ann_path(current_item)
             ann = sly.Annotation.load_json_file(ann_path, project_meta)
-            ann = ann.filter_labels_by_classes(keep_classes=step03_classes.selected_classes)
+            # ann = ann.filter_labels_by_classes(keep_classes=step03_classes.selected_classes)
 
             record["annotations"] = f.get_objects_on_image(ann, g.all_classes)
             record["sly_annotations"] = ann
@@ -229,8 +229,7 @@ def convert_supervisely_to_segmentation(state):
             g.project_dir, project_dir_seg,
             target_classes=state['selectedClasses'],
             progress_cb=progress_other.increment,
-            segmentation_type='instance',
-            add_bg_class=False
+            seg_type='instance'
         )
         progress_other.reset_and_update()
 
@@ -263,6 +262,7 @@ def get_config_path(state):
 def set_trainer_parameters_by_state(state):
     # static
     config_path = get_config_path(state)
+    config_path = os.path.join(g.models_configs_dir, config_path)
     if config_path.endswith('.py'):
         cfg = LazyConfig.load(config_path)
 
@@ -286,7 +286,7 @@ def set_trainer_parameters_by_state(state):
 
     else:
         cfg = get_cfg()
-        cfg.merge_from_file(model_zoo.get_config_file(config_path))
+        cfg.merge_from_file(config_path)
 
         # from UI — train
         cfg.DATALOADER.NUM_WORKERS = state['numWorkers']
@@ -320,6 +320,7 @@ def set_trainer_parameters_by_advanced_config(state):
     config_path = get_config_path(state)
     config_content = state['advancedConfig']['content']
 
+    config_path = os.path.join(g.models_configs_dir, config_path)
     if config_path.endswith('.py'):
         cfg = LazyConfig.load(config_path)
         config_dict = json.loads(config_content)
@@ -419,6 +420,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
         g.seg_project_meta = project_seg.meta
         classes_json = project_seg.meta.obj_classes.to_json()
+        classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
 
         sly.json.dump_json_file(classes_json, model_classes_path)
 

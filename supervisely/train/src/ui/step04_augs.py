@@ -156,7 +156,7 @@ def preview_augs(api: sly.Api, task_id, context, state, app_logger):
     ann = ann.filter_labels_by_classes(keep_classes=step03_classes.selected_classes)
 
     gallery.set_left("before", image_info.full_storage_url, ann)
-    _, res_img, res_ann = sly.imgaug_utils.apply(augs_ppl, g.project_meta, img, ann, segmentation_type='instance')
+    _, res_img, res_ann = sly.imgaug_utils.apply(augs_ppl, g.project_meta, img, ann)
     local_image_path = os.path.join(g.my_app.data_dir, "preview_augs.jpg")
     sly.image.write(local_image_path, res_img)
     if api.file.exists(g.team_id, remote_preview_path):

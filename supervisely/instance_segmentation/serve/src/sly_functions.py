@@ -190,15 +190,16 @@ def get_model_config(config_path):
             os.rename(config_path, custom_config_path)
             cfg = LazyConfig.load(custom_config_path)
         else:
-            cfg = LazyConfig.load(model_zoo.get_config_file(config_path))
-        # add custom
+            config_path = os.path.join(g.models_configs_dir, config_path)
+            cfg = LazyConfig.load(config_path)
     else:
         cfg = get_cfg()
         cfg.set_new_allowed(True)
         if g.weights_type == 'custom':
             cfg.merge_from_file(config_path)
         else:
-            cfg.merge_from_file(model_zoo.get_config_file(config_path))
+            config_path = os.path.join(g.models_configs_dir, config_path)
+            cfg.merge_from_file(config_path)
     return cfg
 
 

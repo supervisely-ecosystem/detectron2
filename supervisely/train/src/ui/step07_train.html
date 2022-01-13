@@ -130,7 +130,7 @@
 
         <sly-table
                 class="mt10"
-                v-if="data.metricsTable"
+                v-if="data.metricsTable && data.metricsTable.length > 0"
                 :content="data.metricsTable"
                 :options="{perPage: 10, pageSizes: 10}">
         </sly-table>

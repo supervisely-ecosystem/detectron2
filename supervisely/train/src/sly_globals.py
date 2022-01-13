@@ -21,6 +21,10 @@ ui_sources_dir = os.path.join(source_path, "ui")
 print(f"UI source directory: {ui_sources_dir}")
 sys.path.append(ui_sources_dir)
 
+models_configs_dir = os.path.join(root_source_dir, "configs")
+print(f"Models configs directory: {models_configs_dir}")
+sys.path.append(source_path)
+
 # only for convenient debug
 debug_env_path = os.path.join(root_source_dir, "supervisely/train", "debug.env")
 secret_debug_env_path = os.path.join(root_source_dir, "supervisely/train", "secret_debug.env")

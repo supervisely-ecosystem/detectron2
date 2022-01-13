@@ -67,7 +67,7 @@ def get_pretrained_models():
                 "model_id": 137849551
             },
             {
-                "config": "../../../configs/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py",
+                "config": "new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_50_FPN_100ep_LSJ/42047764/model_final_bb69de.pkl",
                 "model": "R50-FPN (100)",
                 "train_time": 0.376,
@@ -77,7 +77,7 @@ def get_pretrained_models():
                 "model_id": 42047764
             },
             {
-                "config": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml",
+                "config": "new_baselines/mask_rcnn_R_50_FPN_400ep_LSJ.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_R_50_FPN_400ep_LSJ/42019571/model_final_14d201.pkl",
                 "model": "R50-FPN (400)",
                 "train_time": 0.376,
@@ -107,7 +107,7 @@ def get_pretrained_models():
                 "model_id": 42073830
             },
             {
-                "config": "../../../configs/COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.py",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_100ep_LSJ/42047771/model_final_b7fbab.pkl",
                 "model": "regnetx_4gf_dds_FPN (100)",
                 "train_time": 0.474,
@@ -117,7 +117,7 @@ def get_pretrained_models():
                 "model_id": 42047771
             },
             {
-                "config": "mask_rcnn_regnetx_4gf_dds_fpn_1x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_regnetx_4gf_dds_fpn_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnetx_4gf_dds_FPN_400ep_LSJ/42025447/model_final_f1362d.pkl",
                 "model": "regnetx_4gf_dds_FPN (400)",
                 "train_time": 0.474,
@@ -127,7 +127,7 @@ def get_pretrained_models():
                 "model_id": 42025447
             },
             {
-                "config": "mask_rcnn_regnety_4gf_dds_fpn_1x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_regnety_4gf_dds_fpn_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnety_4gf_dds_FPN_100ep_LSJ/42047784/model_final_6ba57e.pkl",
                 "model": "regnety_4gf_dds_FPN (100)",
                 "train_time": 0.487,
@@ -137,7 +137,7 @@ def get_pretrained_models():
                 "model_id": 42047784
             },
             {
-                "config": "mask_rcnn_regnety_4gf_dds_fpn_1x.yaml",
+                "config": "COCO-InstanceSegmentation/mask_rcnn_regnety_4gf_dds_fpn_1x.yaml",
                 "weightsUrl": "https://dl.fbaipublicfiles.com/detectron2/new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ/42045954/model_final_ef3a80.pkl",
                 "model": "regnety_4gf_dds_FPN (400)",
                 "train_time": 0.487,
@@ -305,12 +305,14 @@ def get_config_path(state):
 
 def get_default_config_for_model(state):
     config_path = get_config_path(state)
+    config_path = os.path.join(g.models_configs_dir, config_path)
     if config_path.endswith('.py'):
         cfg = LazyConfig.load(config_path)
         return filter_lazy_config(cfg)
     else:
         cfg = get_cfg()
-        cfg.merge_from_file(model_zoo.get_config_file(config_path))
+        cfg.merge_from_file(config_path)
+
         return cfg.dump()
 
 # def get_model_info_by_name(name):

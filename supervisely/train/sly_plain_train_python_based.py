@@ -20,6 +20,7 @@ It also includes fewer abstraction, therefore is easier to add custom logic.
 """
 import copy
 import datetime
+import functools
 import logging
 import os
 from collections import OrderedDict
@@ -245,6 +246,7 @@ def do_test(cfg, model, current_iter):
 
     if len(results) == 1:
         results = list(results.values())[0]
+        print(f'{results=}')
         segm_res = dict(dict(results).get('segm',
                                           {}))  # contain keys: ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'AP-kiwi', 'AP-lemon', 'AP-__bg__']
 
@@ -263,6 +265,8 @@ def do_test(cfg, model, current_iter):
 
         g.metrics_for_each_epoch[current_iter + 1] = segm_res
         g.metrics_for_each_epoch[-1] = segm_res
+
+        print(g.metrics_for_each_epoch)
 
     return results
 
@@ -318,24 +322,30 @@ def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
     return res[0][0], res[1], res[2]
 
 
-def mapper(dataset_dict):
+def mapper(dataset_dict, augment=True):
     # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
 
-    augmentations_config = sly.json.load_json_file(g.augs_config_path)
-    augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
-                                                    random_order=augmentations_config["random_order"])
-    #
-    _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
-                                                 image, dataset_dict["sly_annotations"], segmentation_type='instance')
+    if augment:
+        augmentations_config = sly.json.load_json_file(g.augs_config_path)
+        augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
+                                                        random_order=augmentations_config["random_order"])
+        #
+        _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
+                                                     image, dataset_dict["sly_annotations"], segmentation_type='instance')
 
-    dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
+        dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
 
-    annos = f.get_objects_on_image(res_ann, g.all_classes)
+        annos = f.get_objects_on_image(res_ann, g.all_classes)
+        instances = utils.annotations_to_instances(annos, res_img.shape[:2], mask_format="bitmask")
+        dataset_dict["instances"] = utils.filter_empty_instances(instances)
+    else:
+        dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
+        annos = f.get_objects_on_image(dataset_dict["sly_annotations"], g.all_classes)
+        instances = utils.annotations_to_instances(annos, image.shape[:2], mask_format="bitmask")
+        dataset_dict["instances"] = utils.filter_empty_instances(instances)
 
-    instances = utils.annotations_to_instances(annos, res_img.shape[:2], mask_format="bitmask")
-    dataset_dict["instances"] = utils.filter_empty_instances(instances)
     return dataset_dict
 
 
@@ -349,7 +359,6 @@ def do_train(cfg, resume=False):
     optimizer = instantiate(cfg.optimizer)
 
     scheduler = instantiate(cfg.lr_multiplier.scheduler)
-
 
     checkpointer = DetectionCheckpointer(
         model, cfg.train.output_dir
@@ -371,6 +380,7 @@ def do_train(cfg, resume=False):
 
     if g.augs_config_path is not None:
         cfg.dataloader.train.mapper = mapper
+        cfg.dataloader.test.mapper = functools.partial(mapper, augment=False)
 
     data_loader = instantiate(cfg.dataloader.train)
 
