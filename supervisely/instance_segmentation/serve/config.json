@@ -151,10 +151,7 @@
   "isolate": true,
   "need_gpu": true,
   "headless": true,
-  "context_menu": {
-    "target": ["images_project"],
-    "context_root": "Neural Networks"
-  },
+
   "instance_version": "6.4.33",
   "session_tags": [
     "deployed_nn"
