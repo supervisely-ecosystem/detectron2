@@ -68,6 +68,13 @@ all_classes = {}
 
 metrics_for_each_epoch = {}
 
+training_controllers = {
+    'pause': False,
+    'stop': False
+}
+
+iterations_to_add = 0
+
 
 seg_project_meta = None
 

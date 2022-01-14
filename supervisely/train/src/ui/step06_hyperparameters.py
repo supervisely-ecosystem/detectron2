@@ -6,13 +6,11 @@ import yaml
 import step05_models
 import supervisely_lib as sly
 import sly_globals as g
+import sly_functions as f
 
 
-def init(data, state):
-    state["parametersMode"] = 'basic'
-
+def load_default_basic_config(state):
     state["expName"] = g.project_info.name
-
     state["numWorkers"] = 4  # @TODO: 0 - for debug
     state["batchSize"] = 2
     state["batchSizePerImage"] = 128
@@ -21,6 +19,13 @@ def init(data, state):
     state["gpusId"] = '0'
     state['evalInterval'] = 10
     state['checkpointPeriod'] = 100
+    state["visThreshold"] = 0.5
+
+
+def init(data, state):
+    state["parametersMode"] = 'basic'
+
+    load_default_basic_config(state)
 
     state['advancedConfig'] = {
         "content": None,
@@ -33,36 +38,7 @@ def init(data, state):
         }
     }
 
-    # state["imgSize"] = 256
-    # state["imgSize"] = {
-    #     "width": 256,
-    #     "height": 256,
-    #     "proportional": True
-    # }
-    # state["valInterval"] = 1
-    # state["metricsPeriod"] = 10
-    # state["checkpointInterval"] = 1
-    # state["saveLast"] = True
-    # state["saveBest"] = True
-    # state["maxKeepCkptsEnabled"] = True
-    # state["maxKeepCkpts"] = 3
-    #
-    # state["optimizer"] = "Adam" #"SGD"
-    # state["momentum"] = 0.9
-    # state["weightDecay"] = 0.0001
-    # state["nesterov"] = False
-    #
-    # state["lrSchedule"] = "StepLR"
-    # state["stepSize"] = 5
-    # state["milestones"] = "[5, 10, 15]"
-    # state["gammaStep"] = 0.1
-    # state["gammaExp"] = 0.9
-    #
-    # state["lrPolicyEnabled"] = False
-
-    # visualization settings
-
-    state["visThreshold"] = 0.5
+    data['advancedConfigBackup'] = None
 
     state["collapsed6"] = True
     state["disabled6"] = True
@@ -97,23 +73,31 @@ def calc_visualization_step(iters):
     return vis_step
 
 
-def get_config_path(state):
-    models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
-    selected_model = next(item for item in models_by_dataset
-                          if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
-
-    return selected_model.get('config')
-
-
 def get_iters_num(state):
     if state['parametersMode'] == 'basic':
         return state['iters']
     else:
-        config_path = get_config_path(state)
+        config_path = f.get_config_path(state)
         if config_path.endswith('.py'):
             return json.loads(state['advancedConfig']['content'])['train']['max_iter']
         else:
             return yaml.safe_load(state['advancedConfig']['content'])['SOLVER']['MAX_ITER']
+
+
+@g.my_app.callback("reset_configuration")
+@sly.timeit
+@sly.update_fields
+def reset_configuration(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
+    if state['parametersMode'] == 'basic':
+        updated_state = {}
+        load_default_basic_config(state=updated_state)
+
+        for key, value in updated_state.items():
+            fields_to_update[f'state.{key}'] = value
+    else:
+        advanced_config_backup = g.api.task.get_field(g.task_id, 'data.advancedConfigBackup')  # loading advanced config
+        fields_to_update['state.advancedConfig.content'] = advanced_config_backup
+
 
 
 @g.my_app.callback("use_hyp")

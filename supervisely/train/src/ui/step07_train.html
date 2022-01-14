@@ -5,25 +5,62 @@
           :collapsed.sync="state.collapsed7"
           :disabled="{disabled: state.disabled7, message: 'Finish previous steps before run training'}"
 >
-    <div v-if="!data.done7"
-         style="display: flex; flex-direction: row; justify-content: space-between; align-items: center">
-        <el-button
-                type="primary" class="regular"
-                size="small"
-                @click="state.started = true; command('train')"
-                :loading="state.started === true"
-        >
-            <i v-if="!state.started" class="zmdi zmdi-play mr5"></i>
-            Train
-        </el-button>
-        <div v-if="state.eta" style="display: flex">
-            <div class="train-eta-style" style="background-color: #003c71">
-                {{data.progressIter.message}}: {{data.progressIter.current}} / {{data.progressIter.total}}
+    <div v-if="!data.done7 && !state.finishTrain">
+        <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center">
+            <div v-if="!state.trainOnPause">
+                <el-button
+                        type="primary" class="regular"
+                        size="small"
+                        @click="state.started = true; command('train')"
+                        :loading="state.started === true"
+                >
+                    <i v-if="!state.started" class="zmdi zmdi-play mr5"></i>
+                    Train
+                </el-button>
+                <el-button
+                        type="warning" class="regular"
+                        size="small"
+                        :loading="state.trainOnPause"
+                        @click="state.trainOnPause = true; command('update_train_cycle')"
+                        :disabled="state.started === false"
+                >
+                    <i class="zmdi zmdi-pause mr5"></i>
+                    Pause
+                </el-button>
             </div>
-            <span class="train-eta-style">
+            <div v-else>
+
+                <el-button
+                        type="danger" class="regular"
+                        size="small"
+                        :loading="state.finishTrain"
+                        @click="state.finishTrain = true; command('update_train_cycle')"
+
+                >
+                    Finish Train
+                </el-button>
+                <el-button
+                        type="primary" class="regular"
+                        size="small"
+                        :loading="!state.trainOnPause"
+                        @click="state.trainOnPause = false; command('update_train_cycle')"
+
+                >
+                    <i v-if="!state.started" class="zmdi zmdi-play mr5"></i>
+                    Continue
+                </el-button>
+            </div>
+            <div v-if="state.eta" style="display: flex">
+                <div class="train-eta-style" style="background-color: #003c71">
+                    {{data.progressIter.message}}: {{data.progressIter.current}} / {{data.progressIter.total}}
+                </div>
+                <span class="train-eta-style">
                 {{state.eta}}
-            </span>
+                </span>
+            </div>
+
         </div>
+
     </div>
     <div v-if="data.outputUrl">
         <sly-field title="Training artifacts"
@@ -50,7 +87,7 @@
         </div>
         <el-progress :percentage="data.progressOther.percent"></el-progress>
     </div>
-    <div class="mt15" v-if="state.started === true || state.done8">
+    <div class="mt15" v-if="state.started === true || data.done7">
         <hr class="mt10 mb10" style="border: 0; border-top: 1px solid rgba(0,0,0,.12);"/>
         <sly-field title="" description="" style="align-items: center">
             <sly-icon slot="icon" :options="{ color: '#006ad4', bgColor: '#e0f2ff', rounded: false }">

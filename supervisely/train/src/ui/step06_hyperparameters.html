@@ -5,6 +5,9 @@
           :collapsed.sync="state.collapsed6"
           :disabled="{disabled: state.disabled6, message: 'Finish previous steps before configure training'}"
 >
+    <div slot="header">
+      <el-button size='small' :disabled="state.disabled6" @click="command('reset_configuration')">restore defaults</el-button>
+    </div>
 
     <el-tabs type="border-card" class="el-tabs-cards" v-model="state.parametersMode">
         <el-tab-pane name="basic" :disabled="data.done6">
@@ -124,4 +127,5 @@
                v-if="data.done6 && !state.started">
         <i class="zmdi zmdi-rotate-left mr5"></i> Change hyperparameters
     </el-button>
+
 </sly-card>

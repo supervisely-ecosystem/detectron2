@@ -1,5 +1,6 @@
 import functools
 import os
+import time
 
 import numpy as np
 import pycocotools.mask
@@ -289,3 +290,12 @@ def get_model_config(config_path, state):
             config_path = os.path.join(g.models_configs_dir, config_path)
             cfg.merge_from_file(config_path)
     return cfg
+
+
+def control_training_cycle():
+    if g.training_controllers['pause']:
+        while g.training_controllers['pause']:
+            time.sleep(1)
+            if g.training_controllers['stop']:
+                return 'stop'
+    return 'continue'

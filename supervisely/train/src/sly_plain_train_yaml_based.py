@@ -346,109 +346,79 @@ def do_train(cfg, resume=False):
     )
     max_iter = cfg.SOLVER.MAX_ITER
 
-    periodic_checkpointer = PeriodicCheckpointer(
-        checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter
-    )
+    while not g.training_controllers['stop']:
+        if f.control_training_cycle() == 'continue':
+            if start_iter != 0:
+                # start_iter += 1
+                max_iter += cfg.SOLVER.MAX_ITER
+                g.sly_progresses['iter'].set_total(max_iter - 1)
+        else:
+            return 0
 
-    writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
-    writers.append(SuperviselyMetricPrinter(max_iter))
+        periodic_checkpointer = PeriodicCheckpointer(
+            checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter
+        )
 
-    # compared to "train_net.py", we do not support accurate timing and
-    # precise BN here, because they are not trivial to implement in a small training loop
+        writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
+        writers.append(SuperviselyMetricPrinter(max_iter))
 
-    if g.augs_config_path is not None:
-        data_loader = build_detection_train_loader(cfg,  # AUGMENTATIONS HERE
-                                                   mapper=mapper)
-    else:
-        data_loader = build_detection_train_loader(cfg)
+        # compared to "train_net.py", we do not support accurate timing and
+        # precise BN here, because they are not trivial to implement in a small training loop
 
-    logger.info("Starting training from iteration {}".format(start_iter))
-    with EventStorage(start_iter) as storage:
-        for data, iteration in zip(data_loader, range(start_iter, max_iter)):
-            storage.iter = iteration
+        if g.augs_config_path is not None:
+            data_loader = build_detection_train_loader(cfg,  # AUGMENTATIONS HERE
+                                                       mapper=mapper)
+        else:
+            data_loader = build_detection_train_loader(cfg)
 
-            loss_dict = model(data)
-            losses = sum(loss_dict.values())
-            assert torch.isfinite(losses).all(), loss_dict
+        logger.info("Starting training from iteration {}".format(start_iter))
+        with EventStorage(start_iter) as storage:
+            for data, iteration in zip(data_loader, range(start_iter, max_iter)):
+                if f.control_training_cycle() == 'stop':
+                    return 0
 
-            loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
-            losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-            if comm.is_main_process():
-                storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
+                start_iter = iteration
+                storage.iter = iteration
 
-            optimizer.zero_grad()
-            losses.backward()
-            optimizer.step()
-            storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
-            scheduler.step()
+                loss_dict = model(data)
+                losses = sum(loss_dict.values())
+                assert torch.isfinite(losses).all(), loss_dict
 
-            if (
-                    cfg.TEST.EVAL_PERIOD > 0
-                    and iteration % cfg.TEST.EVAL_PERIOD == 0
-                    and iteration != max_iter - 1
-            ):
-                do_test(cfg, model, iteration)
-                # Compared to "train_net.py", the test results are not dumped to EventStorage
-                comm.synchronize()
+                loss_dict_reduced = {k: v.item() for k, v in comm.reduce_dict(loss_dict).items()}
+                losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+                if comm.is_main_process():
+                    storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
 
-            if (
-                    cfg.TEST.VIS_PERIOD > 0
-                    and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
-                    and iteration != max_iter - 1
-            ):
-                do_test(cfg, model, iteration)
-                visualize_results(cfg, model)
-                comm.synchronize()
+                optimizer.zero_grad()
+                losses.backward()
+                optimizer.step()
+                storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
+                scheduler.step()
 
-            if (iteration - start_iter > 5 and (iteration % 10 == 0 or iteration == max_iter - 1)) \
-                    or iteration - start_iter == 0:
-                for writer in writers:
-                    writer.write()
-            periodic_checkpointer.step(iteration)
+                if (
+                        cfg.TEST.EVAL_PERIOD > 0
+                        and iteration % cfg.TEST.EVAL_PERIOD == 0
+                        and iteration != max_iter - 1
+                ):
+                    do_test(cfg, model, iteration)
+                    comm.synchronize()
 
-# def setup(args):
-#     """
-#     Create configs and perform basic setups.
-#     """
-#     cfg = get_cfg()
-#     cfg.merge_from_file(args.config_file)
-#     cfg.merge_from_list(args.opts)
-#     cfg.freeze()
-#     default_setup(
-#         cfg, args
-#     )  # if you don't like any of the default setup, write your own setup code
-#     return cfg
+                if (
+                        cfg.TEST.VIS_PERIOD > 0
+                        and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
+                        and iteration != max_iter - 1
+                ):
+                    do_test(cfg, model, iteration)
+                    visualize_results(cfg, model)
+                    comm.synchronize()
 
-#
-# def main(args):
-#     cfg = setup(args)
-#
-#     model = build_model(cfg)
-#     logger.info("Model:\n{}".format(model))
-#     if args.eval_only:
-#         DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
-#             cfg.MODEL.WEIGHTS, resume=args.resume
-#         )
-#         return do_test(cfg, model)
-#
-#     distributed = comm.get_world_size() > 1
-#     if distributed:
-#         model = DistributedDataParallel(
-#             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False
-#         )
-#
-#     do_train(cfg, model, resume=args.resume)
-#     return do_test(cfg, model)
+                if (iteration - start_iter > 5 and (iteration % 10 == 0 or iteration == max_iter - 1)) \
+                        or iteration - start_iter == 0:
+                    for writer in writers:
+                        writer.write()
+                periodic_checkpointer.step(iteration)
 
-#
-# if __name__ == "__main__":
-#     args = default_argument_parser().parse_args()
-#     print("Command Line Args:", args)
-#     launch(
-#         main,
-#         args.num_gpus,
-#         num_machines=args.num_machines,
-#         machine_rank=args.machine_rank,
-#         dist_url=args.dist_url,
-#         args=(args,),
-#     )
+        g.training_controllers['pause'] = True
+        g.api.task.set_field(g.task_id, 'state.trainOnPause', True)
+        g.my_app.show_modal_window("All iterations completed. \n"
+                                   "You can finish or continue train.")

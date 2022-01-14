@@ -79,6 +79,9 @@ def init(data, state):
     data['metricsTable'] = None
     data['metricsForEpochs'] = []
 
+    state['trainOnPause'] = False
+    state['finishTrain'] = False
+
     data["done7"] = False
 
 
@@ -253,8 +256,6 @@ def configure_datasets(state, project_seg_dir_path):
     MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
 
 
-
-
 def remove_all_multi_gpu_elements(cfg_dict):
     for key, value in cfg_dict.items():
         if isinstance(value, dict) or isinstance(value, DictConfig):
@@ -323,7 +324,7 @@ def update_config_by_custom(cfg, updates):
 
 def set_trainer_parameters_by_advanced_config(state):
     config_path = f.get_config_path(state)
-    cfg = get_model_config(config_path, state)
+    cfg = f.get_model_config(config_path, state)
 
     config_content = state['advancedConfig']['content']
 
@@ -395,6 +396,16 @@ def configure_trainer(state):
     load_supervisely_parameters(cfg, state)
 
     return cfg, config_path
+
+
+@g.my_app.callback("update_train_cycle")
+@sly.update_fields
+@sly.timeit
+def update_train_cycle(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
+    g.training_controllers['pause'] = state['trainOnPause']
+    g.training_controllers['stop'] = state['finishTrain']
+
+
 
 
 @g.my_app.callback("previewByEpoch")

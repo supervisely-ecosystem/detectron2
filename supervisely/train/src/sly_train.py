@@ -23,12 +23,9 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# @TODO: load custom configs
-# @TODO: add stop train button
 # @TODO: add stop train button
 # @TODO: add continue train button
 # @TODO: fix upload models progress step bag
-# @TODO: reset config button
 
 if __name__ == "__main__":
     sly.main_wrapper("main", main)

@@ -129,6 +129,8 @@ def load_advanced_config(state, fields_to_update):
         fields_to_update['state.advancedConfig.options.mode'] = 'ace/mode/yaml'
 
     fields_to_update['state.advancedConfig.content'] = get_default_config_for_model(state)
+    fields_to_update['data.advancedConfigBackup'] = get_default_config_for_model(state)
+
 
 
 @g.my_app.callback("download_weights")
