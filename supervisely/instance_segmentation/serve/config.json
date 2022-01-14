@@ -10,7 +10,7 @@
   "docker_image": "supervisely/detectron2:1.0.1",
   "main_script": "supervisely/instance_segmentation/serve/src/sly_serve.py",
   "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
-  "modal_width": 1020,
+  "modal_width": "1020px",
   "modal_template_state": {
     "weightsInitialization": "custom",
     "pretrainedDataset": "COCO",
