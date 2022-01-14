@@ -164,7 +164,7 @@ def download_model_weights():
     else:  # download from Internet
         models_by_dataset = pretrained_models.get_pretrained_models()[g.selected_pretrained_dataset]
         selected_model = next(item for item in models_by_dataset
-                              if item["model"] == g.selected_model[g.selected_pretrained_dataset])
+                              if item["model"] == g.selected_model)
 
         weights_url = selected_model.get('weightsUrl')
         if weights_url is not None:

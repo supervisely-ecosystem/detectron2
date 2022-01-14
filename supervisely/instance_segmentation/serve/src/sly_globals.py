@@ -32,9 +32,9 @@ device = f'{os.environ["modal.state.device"]}' if os.environ['modal.state.device
 weights_type = os.environ['modal.state.weightsInitialization']
 
 selected_pretrained_dataset = os.environ['modal.state.pretrainedDataset']
-print(os.environ)
+
 selected_model = os.environ[f'modal.state.selectedModel.{selected_pretrained_dataset}']
-print(selected_model)
+
 # selected_model = json.loads(os.environ['modal.state.selectedModel'])
 
 custom_weights_url = os.environ['modal.state.weightsPath']
