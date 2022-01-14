@@ -11,7 +11,7 @@ import sly_functions as f
 
 def load_default_basic_config(state):
     state["expName"] = g.project_info.name
-    state["numWorkers"] = 4  # @TODO: 0 - for debug
+    state["numWorkers"] = 4  # 0 - for debug
     state["batchSize"] = 2
     state["batchSizePerImage"] = 128
     state["lr"] = 0.00025
