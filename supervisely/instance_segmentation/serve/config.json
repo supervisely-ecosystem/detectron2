@@ -16,7 +16,7 @@
     "pretrainedDataset": "COCO",
     "device": "cuda:0",
     "weightsPath": "",
-    "selectedModel": "{'COCO': 'R50-C4 (1x)', 'LVIS': 'R50-FPN', 'Cityscapes': 'R50-FPN', 'Others': 'Deformable Conv (3x)'}",
+    "selectedModel": {"COCO": "R50-C4 (1x)", "LVIS": "R50-FPN", "Cityscapes": "R50-FPN", "Others": "Deformable Conv (3x)"},
     "pretrainedModels": {
         "COCO": [
             {
