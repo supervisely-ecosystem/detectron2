@@ -65,10 +65,5 @@ def main():
     g.my_app.run()
 
 
-# @TODO: add python configs
-
-
-# @TODO: move inference methods to SDK
-
 if __name__ == "__main__":
     sly.main_wrapper("main", main)

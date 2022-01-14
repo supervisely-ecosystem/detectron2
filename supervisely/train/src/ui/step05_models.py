@@ -23,6 +23,9 @@ def init(data, state):
     state["selectedModel"] = {pretrained_dataset: data["pretrainedModels"][pretrained_dataset][0]['model']
                               for pretrained_dataset in data["pretrainedModels"].keys()}
 
+
+    print({pretrained_dataset: data["pretrainedModels"][pretrained_dataset][0]['model']
+                              for pretrained_dataset in data["pretrainedModels"].keys()})
     state["weightsInitialization"] = "pretrained"  # "custom"
     state["collapsed5"] = True
     state["disabled5"] = True
