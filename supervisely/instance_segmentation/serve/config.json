@@ -10,13 +10,13 @@
   "docker_image": "supervisely/detectron2:1.0.1",
   "main_script": "supervisely/instance_segmentation/serve/src/sly_serve.py",
   "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
-  "modal_width": 1040,
+  "modal_width": 900,
   "modal_template_state": {
     "weightsInitialization": "custom",
     "pretrainedDataset": "COCO",
     "device": "cuda:0",
     "weightsPath": "",
-    "selectedModel": {"COCO": "R50-C4 (1x)", "LVIS": "R50-FPN", "Cityscapes": "R50-FPN", "Others": "Deformable Conv (3x)"},
+    "selectedModel": "{'COCO': 'R50-C4 (1x)', 'LVIS': 'R50-FPN', 'Cityscapes': 'R50-FPN', 'Others': 'Deformable Conv (3x)'}",
     "pretrainedModels": {
         "COCO": [
             {
