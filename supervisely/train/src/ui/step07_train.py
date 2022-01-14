@@ -11,7 +11,7 @@ from detectron2.structures import BoxMode
 
 from detectron2.engine import DefaultTrainer
 from detectron2 import model_zoo
-from detectron2.config import get_cfg
+
 from detectron2.modeling import build_model
 
 from detectron2.config import LazyConfig
@@ -253,12 +253,6 @@ def configure_datasets(state, project_seg_dir_path):
     MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
 
 
-def get_config_path(state):
-    models_by_dataset = step05_models.get_pretrained_models()[state["pretrainedDataset"]]
-    selected_model = next(item for item in models_by_dataset
-                          if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
-
-    return selected_model.get('config')
 
 
 def remove_all_multi_gpu_elements(cfg_dict):
@@ -274,11 +268,10 @@ def remove_all_multi_gpu_elements(cfg_dict):
 
 def set_trainer_parameters_by_state(state):
     # static
-    config_path = get_config_path(state)
-    config_path = os.path.join(g.models_configs_dir, config_path)
-    if config_path.endswith('.py'):
-        cfg = LazyConfig.load(config_path)
+    config_path = f.get_config_path(state)
+    cfg = f.get_model_config(config_path, state)
 
+    if config_path.endswith('.py'):
         # from UI — train
         cfg.dataloader.train.num_workers = state['numWorkers']
         cfg.dataloader.test.num_workers = state['numWorkers']
@@ -300,9 +293,6 @@ def set_trainer_parameters_by_state(state):
         cfg = remove_all_multi_gpu_elements(cfg)
 
     else:
-        cfg = get_cfg()
-        cfg.merge_from_file(config_path)
-
         # from UI — train
         cfg.DATALOADER.NUM_WORKERS = state['numWorkers']
         cfg.SOLVER.IMS_PER_BATCH = state['batchSize']
@@ -332,18 +322,15 @@ def update_config_by_custom(cfg, updates):
 
 
 def set_trainer_parameters_by_advanced_config(state):
-    config_path = get_config_path(state)
+    config_path = f.get_config_path(state)
+    cfg = get_model_config(config_path, state)
+
     config_content = state['advancedConfig']['content']
 
-    config_path = os.path.join(g.models_configs_dir, config_path)
     if config_path.endswith('.py'):
-        cfg = LazyConfig.load(config_path)
         config_dict = json.loads(config_content)
-
         cfg = update_config_by_custom(cfg, config_dict)
-
     else:
-        cfg = get_cfg()
         loaded_yaml = yaml.safe_load(config_content)
         yaml_cfg = CfgNode(loaded_yaml)
         cfg.merge_from_other_cfg(cfg_other=yaml_cfg)
@@ -351,7 +338,7 @@ def set_trainer_parameters_by_advanced_config(state):
 
 
 def load_supervisely_parameters(cfg, state):
-    config_path = get_config_path(state)
+    config_path = f.get_config_path(state)
     if config_path.endswith('.py'):
         cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
         cfg.train.init_checkpoint = g.local_weights_path
@@ -398,7 +385,7 @@ def save_config_locally(cfg, config_path):
 
 
 def configure_trainer(state):
-    config_path = get_config_path(state)
+    config_path = f.get_config_path(state)
 
     if state['parametersMode'] == 'basic':
         cfg = set_trainer_parameters_by_state(state)
@@ -443,7 +430,6 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         # --------
 
         configure_datasets(state, project_dir_seg)
-        # configure_datasets(state, g.project_dir)
         cfg, config_path = configure_trainer(state)
 
         sly.logger.info(f'{config_path=}')

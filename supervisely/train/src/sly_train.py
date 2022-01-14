@@ -23,7 +23,6 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# @TODO: test every model with py configs
 # @TODO: load custom configs
 # @TODO: add stop train button
 # @TODO: add stop train button

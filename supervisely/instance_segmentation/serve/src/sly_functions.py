@@ -143,7 +143,7 @@ def download_sly_file(remote_path, local_path, progress):
                             progress.increment)
         progress.reset_and_update()
 
-        sly.logger.info("Custom weights has been successfully downloaded",
+        sly.logger.info(f"{remote_path} has been successfully downloaded",
                         extra={"weights": local_path})
 
 
