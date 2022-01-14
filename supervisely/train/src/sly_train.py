@@ -23,10 +23,6 @@ def main():
     g.my_app.run(data=data, state=state)
 
 
-# @TODO: add stop train button
-# @TODO: add continue train button
-# @TODO: fix upload models progress step bag
-
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
 

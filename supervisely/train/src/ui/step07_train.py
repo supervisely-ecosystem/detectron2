@@ -132,6 +132,7 @@ def upload_artifacts_and_log_progress(experiment_name):
     _save_link_to_ui(g.artifacts_dir, g.my_app.app_url)
 
     def upload_monitor(monitor, api: sly.Api, task_id, progress: sly.app.widgets.ProgressBar):
+
         if progress.get_total() is None:
             progress.set_total(monitor.len)
         else:
@@ -406,8 +407,6 @@ def update_train_cycle(api: sly.Api, task_id, context, state, app_logger, fields
     g.training_controllers['stop'] = state['finishTrain']
 
 
-
-
 @g.my_app.callback("previewByEpoch")
 @sly.update_fields
 @sly.timeit
@@ -465,7 +464,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         else:
             sly_plain_train_yaml_based.do_train(cfg=cfg)
 
-        # --------
+        # # --------
 
         g.sly_progresses['iter'].reset_and_update()
 

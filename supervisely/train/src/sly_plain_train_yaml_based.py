@@ -412,8 +412,7 @@ def do_train(cfg, resume=False):
                     visualize_results(cfg, model)
                     comm.synchronize()
 
-                if (iteration - start_iter > 5 and (iteration % 10 == 0 or iteration == max_iter - 1)) \
-                        or iteration - start_iter == 0:
+                if iteration % 10 == 0 or iteration == max_iter - 1:
                     for writer in writers:
                         writer.write()
                 periodic_checkpointer.step(iteration)

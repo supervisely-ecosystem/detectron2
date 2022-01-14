@@ -35,8 +35,8 @@ my_app = sly.AppService()
 api = my_app.public_api
 task_id = my_app.task_id
 
-#@TODO: for debug
-sly.fs.clean_dir(my_app.data_dir)
+# @TODO: for debug
+# sly.fs.clean_dir(my_app.data_dir)
 
 team_id = int(os.environ['context.teamId'])
 workspace_id = int(os.environ['context.workspaceId'])
