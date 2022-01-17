@@ -30,8 +30,8 @@ Application key points:
 
 # How to Run
 
-### 1. Add [Serve Detectron2](https://ecosystem.supervise.ly/apps/supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve/) to your team
-<img data-key="sly-module-link" data-module-slug="supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve/" src="https://imgur.com/jKrRF7p.png" width="350px" style='padding-bottom: 10px'/>
+### 1. Add [Serve Detectron2](https://ecosystem.supervise.ly/apps/supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve) to your team
+<img data-key="sly-module-link" data-module-slug="supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve" src="https://imgur.com/jKrRF7p.png" width="350px" style='padding-bottom: 10px'/>
 
 ### 2. Choose model, deploying device and press the **Run** button
 <img src="https://imgur.com/DLDYMbk.png" width="80%" style='padding-top: 10px'>  
