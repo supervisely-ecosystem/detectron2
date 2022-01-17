@@ -6,7 +6,13 @@
           :disabled="{disabled: state.disabled6, message: 'Finish previous steps before configure training'}"
 >
     <div slot="header">
-        <el-button size='small' :disabled="state.disabled6" @click="command('reset_configuration')">restore defaults
+        <a href="https://detectron2.readthedocs.io/en/latest/modules/config.html#" target="_blank">
+            <el-button size='small' :plain="true" type="warning" class="regular mr5">read more
+            </el-button>
+
+        </a>
+        <el-button size='small' :disabled="state.disabled6 || data.done6" @click="command('reset_configuration')">
+            restore defaults
         </el-button>
     </div>
 
@@ -29,7 +35,7 @@
                     <el-input v-model="state.expName" :disabled="data.done6" style="width: 400px;"></el-input>
                 </sly-field>
                 <sly-field title="Number of iterations"
-                           description="One batch per iteration">
+                           description="">
                     <el-input-number v-model="state.iters" :min="1" :max="10000"
                                      :disabled="data.done6"></el-input-number>
                 </sly-field>
@@ -70,16 +76,45 @@
                     <el-input-number v-model="state.numWorkers" :min="0" :disabled="data.done6"></el-input-number>
                 </sly-field>
                 <sly-field title="Validation interval"
-                           description="Validate every">
-                    <el-input-number v-model="state.evalInterval" :min="1" :max="state.iters"
-                                     :disabled="data.done6"></el-input-number>
-                </sly-field>
-                <sly-field title="Save checkpoint interval"
-                           description="Save model weights every">
-                    <el-input-number v-model="state.checkpointPeriod" :min="0" :max="state.iters"
-                                     :disabled="data.done6"></el-input-number>
+                           description="Run evaluation step every">
+                    <el-input-number
+                            class="mr5"
+                            v-model="state.evalInterval" :min="1" :max="state.iters"
+                            :disabled="data.done6"></el-input-number>
+                    iters
                 </sly-field>
 
+
+            </div>
+            <sly-field title="Checkpoints" description="Checkpoints parameters"
+                       style="margin-bottom: 10px; margin-top: 20px;">
+                <sly-icon slot="icon" :options="{ color: 'white', bgColor: '#db7d65', rounded: false }">
+                    <i class="zmdi zmdi-settings"></i>
+                </sly-icon>
+            </sly-field>
+            <div style="border-left: 2px solid #db7d65; padding: 0 12px">
+                <sly-field title="Save checkpoint interval"
+                           description="Save model weights every">
+                    <el-input-number class="mr5" v-model="state.checkpointPeriod" :min="0" :max="state.iters"
+                                     :disabled="data.done6"></el-input-number>
+                    iters
+                </sly-field>
+                <sly-field title="Max to keep"
+                           description="The maximum number of checkpoints that can be stored at the same time">
+                    <el-input-number class="mr5" v-model="state.checkpointMaxToKeep" :min="0" :max="25"
+                                     :disabled="data.done6"></el-input-number>
+                    checkpoints
+                </sly-field>
+                <sly-field title="Save best"
+                           description="Save best checkpoint according SEGM AP metric"
+                           class="mb10">
+                    <el-switch
+                            :disabled="data.done6"
+                            v-model="state.checkpointSaveBest"
+                            on-text=""
+                            off-text="">
+                    </el-switch>
+                </sly-field>
 
             </div>
 

@@ -344,6 +344,8 @@ def load_supervisely_parameters(cfg, state):
     if config_path.endswith('.py'):
         cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
         cfg.train.init_checkpoint = g.local_weights_path
+        cfg.train['save_best_model'] = state['checkpointSaveBest']
+        cfg.train['max_to_keep'] = state['checkpointMaxToKeep']
 
         cfg.model.roi_heads.num_classes = len(g.all_classes)
         cfg.model.roi_heads.box_predictor.num_classes = len(g.all_classes)
@@ -365,6 +367,9 @@ def load_supervisely_parameters(cfg, state):
         cfg.INPUT.MASK_FORMAT = 'bitmask'
 
         cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
+        cfg.SAVE_BEST_MODEL = state['checkpointSaveBest']
+        cfg.MAX_TO_KEEP = state['checkpointMaxToKeep']
+
         cfg.MODEL.WEIGHTS = g.local_weights_path
 
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(g.all_classes)

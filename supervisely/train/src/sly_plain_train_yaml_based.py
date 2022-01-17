@@ -34,6 +34,7 @@ from torch.nn.parallel import DistributedDataParallel
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
+from detectron2.engine import BestCheckpointer
 from detectron2.config import get_cfg
 from detectron2.data import (
     MetadataCatalog,
@@ -341,12 +342,18 @@ def do_train(cfg, resume=False):
     checkpointer = DetectionCheckpointer(
         model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
     )
-    start_iter = (
-            checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
-    )
+    checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume)
+    # start_iter = (
+    #         checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
+    # )
 
     start_iter = 0
     max_iter = cfg.SOLVER.MAX_ITER + 1
+
+    best_model_info = {
+        'segm_AP': 0,
+        'iter': 0
+    }
 
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
@@ -360,7 +367,7 @@ def do_train(cfg, resume=False):
         # scheduler._max_iter = max_iter
 
         periodic_checkpointer = PeriodicCheckpointer(
-            checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter
+            checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter, max_to_keep=cfg.MAX_TO_KEEP
         )
 
         writers = default_writers(cfg.OUTPUT_DIR, max_iter) if comm.is_main_process() else []
@@ -375,7 +382,7 @@ def do_train(cfg, resume=False):
         else:
             data_loader = build_detection_train_loader(cfg)
 
-        logger.info("Starting training from iteration {}".format(start_iter))
+        logger.info("training from iteration {}".format(start_iter))
         with EventStorage(start_iter) as storage:
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
                 if f.control_training_cycle() == 'stop':
@@ -407,7 +414,9 @@ def do_train(cfg, resume=False):
                         and iteration % cfg.TEST.EVAL_PERIOD == 0
                         and iteration != max_iter - 1
                 ):
-                    do_test(cfg, model, iteration)
+                    results = do_test(cfg, model, iteration)
+                    if cfg.SAVE_BEST_MODEL:
+                        f.save_best_model(checkpointer, best_model_info, results, iteration)
                     comm.synchronize()
 
                 if (
@@ -415,8 +424,10 @@ def do_train(cfg, resume=False):
                         and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
                         and iteration != max_iter - 1
                 ):
-                    do_test(cfg, model, iteration)
+                    results = do_test(cfg, model, iteration)
                     visualize_results(cfg, model)
+                    if cfg.SAVE_BEST_MODEL:
+                        f.save_best_model(checkpointer, best_model_info, results, iteration)
                     comm.synchronize()
 
                 if iteration % 10 == 0 or iteration == max_iter - 1:

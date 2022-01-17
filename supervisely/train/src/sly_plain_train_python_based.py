@@ -367,6 +367,11 @@ def do_train(cfg, resume=False):
     start_iter = 0
     max_iter = cfg.train.max_iter + 1
 
+    best_model_info = {
+        'segm_AP': 0,
+        'iter': 0
+    }
+
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
@@ -376,10 +381,8 @@ def do_train(cfg, resume=False):
         else:
             return 0
 
-
-
         periodic_checkpointer = PeriodicCheckpointer(
-            checkpointer, cfg.train.checkpointer.period, max_iter=max_iter
+            checkpointer, cfg.train.checkpointer.period, max_iter=max_iter, max_to_keep=cfg.train.max_to_keep
         )
 
         writers = default_writers(cfg.train.output_dir, max_iter) if comm.is_main_process() else []
@@ -429,7 +432,10 @@ def do_train(cfg, resume=False):
                         and iteration != max_iter - 1
                 ):
                     try:
-                        do_test(cfg, model, iteration)
+                        results = do_test(cfg, model, iteration)
+
+                        if cfg.train.save_best_model:
+                            f.save_best_model(checkpointer, best_model_info, results, iteration)
                     except Exception as ex:
                         logger.warning(f"{ex} while testing")
                     # Compared to "train_net.py", the test results are not dumped to EventStorage
@@ -441,8 +447,11 @@ def do_train(cfg, resume=False):
                         and iteration != max_iter - 1
                 ):
                     try:
-                        do_test(cfg, model, iteration)
+                        results = do_test(cfg, model, iteration)
                         visualize_results(cfg, model)
+
+                        if cfg.train.save_best_model:
+                            f.save_best_model(checkpointer, best_model_info, results, iteration)
                     except Exception as ex:
                         logger.warning(f"{ex} while testing")
                     comm.synchronize()

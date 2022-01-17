@@ -217,7 +217,6 @@ def get_pretrained_models():
                 "model_id": 18131413
             }
 
-
         ]
     }
 
@@ -242,7 +241,6 @@ def get_objects_on_image(ann, all_classes):
         seg_mask_in_image_coords = np.asarray(mask_to_image_size(label, seg_mask, ann.img_size))
 
         rle_seg_mask = pycocotools.mask.encode(np.asarray(seg_mask_in_image_coords, order="F"))
-
 
         obj = {
             "bbox": [rect.left, rect.top, rect.right, rect.bottom],
@@ -299,3 +297,24 @@ def control_training_cycle():
             if g.training_controllers['stop']:
                 return 'stop'
     return 'continue'
+
+
+def save_best_model(checkpointer, best_model_info, results, iter):
+    # print(results)
+    if len(results) == 2:
+        # results = list(results.values())[0]
+        segm_res = dict(dict(results).get('segm', {}))
+
+        prev_ap = best_model_info.get('segm_AP')
+        actual_ap = segm_res.get('AP', 0)
+
+        # print(f'actial_ap: {actual_ap}\n'
+        #       f'prev_ap: {prev_ap}')
+
+        if actual_ap > prev_ap:
+            best_model_info['segm_AP'] = actual_ap
+            best_model_info['iter'] = iter
+
+            checkpointer.save('best_model')
+
+

@@ -18,7 +18,11 @@ def load_default_basic_config(state):
     state["iters"] = 300
     state["gpusId"] = '0'
     state['evalInterval'] = 10
+
     state['checkpointPeriod'] = 100
+    state['checkpointMaxToKeep'] = 3
+    state['checkpointSaveBest'] = True
+
     state["visThreshold"] = 0.5
 
 
