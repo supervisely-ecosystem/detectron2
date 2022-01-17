@@ -1,7 +1,7 @@
 
 <div align="center" markdown>
 
-<img src="https://imgur.com/9SZaJmq.png"/>  
+<img src="https://imgur.com/T7nLLdH.png"/>  
 
 # Train Detectron2 (Instance Segmentation)
 
