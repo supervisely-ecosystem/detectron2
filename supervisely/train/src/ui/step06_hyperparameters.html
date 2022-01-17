@@ -6,7 +6,8 @@
           :disabled="{disabled: state.disabled6, message: 'Finish previous steps before configure training'}"
 >
     <div slot="header">
-      <el-button size='small' :disabled="state.disabled6" @click="command('reset_configuration')">restore defaults</el-button>
+        <el-button size='small' :disabled="state.disabled6" @click="command('reset_configuration')">restore defaults
+        </el-button>
     </div>
 
     <el-tabs type="border-card" class="el-tabs-cards" v-model="state.parametersMode">
@@ -27,7 +28,8 @@
                            description="Training artifacts will be saved to the following directory in team files: /detectron2/<task_id>_<experiment name>">
                     <el-input v-model="state.expName" :disabled="data.done6" style="width: 400px;"></el-input>
                 </sly-field>
-                <sly-field title="Number of iterations">
+                <sly-field title="Number of iterations"
+                           description="One batch per iteration">
                     <el-input-number v-model="state.iters" :min="1" :max="10000"
                                      :disabled="data.done6"></el-input-number>
                 </sly-field>
@@ -38,12 +40,15 @@
                 <!--                      :disabled="data.done6"></sly-size>-->
                 <!--        </sly-field>-->
                 <sly-field title="Total batch size"
-                           >
+                           description="The number of training images per iteration"
+                >
                     <el-input-number v-model="state.batchSize" :min="1" :disabled="data.done6"></el-input-number>
                 </sly-field>
                 <sly-field title="Batch size per image"
-                           >
-                    <el-input-number v-model="state.batchSizePerImage" :min="4" :disabled="data.done6"></el-input-number>
+                           description="Number of regions per image"
+                >
+                    <el-input-number v-model="state.batchSizePerImage" :min="4"
+                                     :disabled="data.done6"></el-input-number>
                 </sly-field>
                 <sly-field title="Learning rate">
                     <el-input-number v-model="state.lr" :min="0" :step="0.0005" :debounce="1000"
@@ -65,12 +70,12 @@
                     <el-input-number v-model="state.numWorkers" :min="0" :disabled="data.done6"></el-input-number>
                 </sly-field>
                 <sly-field title="Validation interval"
-                           description="validate every">
+                           description="Validate every">
                     <el-input-number v-model="state.evalInterval" :min="1" :max="state.iters"
                                      :disabled="data.done6"></el-input-number>
                 </sly-field>
                 <sly-field title="Save checkpoint interval"
-                           description="save model weights every">
+                           description="Save model weights every">
                     <el-input-number v-model="state.checkpointPeriod" :min="0" :max="state.iters"
                                      :disabled="data.done6"></el-input-number>
                 </sly-field>
@@ -88,7 +93,7 @@
                 <!--        Condition ? : - is for convenient debug-->
                 <!--        (IsItMuted === true) ? 'On' : 'Off';-->
                 <sly-field title="Visualizations Threshold"
-                           description="segmentation masks threshold on visualizations">
+                           description="Segmentation masks threshold on visualizations">
                     <el-input-number v-model="state.visThreshold"
                                      :min="0" :max="1"
                                      :disabled="data.done6">

@@ -336,15 +336,17 @@ def do_train(cfg, resume=False):
     model = build_model(cfg)
     model.train()
     optimizer = build_optimizer(cfg, model)
-    scheduler = build_lr_scheduler(cfg, optimizer)
 
+    scheduler = build_lr_scheduler(cfg, optimizer)
     checkpointer = DetectionCheckpointer(
         model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
     )
     start_iter = (
             checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
     )
-    max_iter = cfg.SOLVER.MAX_ITER
+
+    start_iter = 0
+    max_iter = cfg.SOLVER.MAX_ITER + 1
 
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
@@ -354,6 +356,8 @@ def do_train(cfg, resume=False):
                 g.sly_progresses['iter'].set_total(max_iter - 1)
         else:
             return 0
+
+        # scheduler._max_iter = max_iter
 
         periodic_checkpointer = PeriodicCheckpointer(
             checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD, max_iter=max_iter
@@ -393,7 +397,10 @@ def do_train(cfg, resume=False):
                 losses.backward()
                 optimizer.step()
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
-                scheduler.step()
+                try:
+                    scheduler.step()
+                except:
+                    pass
 
                 if (
                         cfg.TEST.EVAL_PERIOD > 0

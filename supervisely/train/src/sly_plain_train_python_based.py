@@ -349,8 +349,6 @@ def mapper(dataset_dict, augment=True):
     return dataset_dict
 
 
-
-
 def do_train(cfg, resume=False):
     model = instantiate(cfg.model)
     model.train()
@@ -359,7 +357,6 @@ def do_train(cfg, resume=False):
 
     cfg.optimizer.params.model = model
     optimizer = instantiate(cfg.optimizer)
-
     scheduler = instantiate(cfg.lr_multiplier.scheduler)
 
     checkpointer = DetectionCheckpointer(
@@ -378,6 +375,8 @@ def do_train(cfg, resume=False):
                 g.sly_progresses['iter'].set_total(max_iter - 1)
         else:
             return 0
+
+
 
         periodic_checkpointer = PeriodicCheckpointer(
             checkpointer, cfg.train.checkpointer.period, max_iter=max_iter
