@@ -7,6 +7,7 @@
 <p align="center">
   <a href="#Overview">Overview</a> •
   <a href="#How-To-Run">How To Run</a> •
+  <a href="#Common-apps">Common Apps</a> •
   <a href="#Acknowledgment">Acknowledgment</a>
 </p>
 
@@ -43,9 +44,7 @@ Application key points:
 # Common apps
 
 You can use served model in next Supervisely Applications ⬇️ 
-
-<details>
-  <summary style='font-size: 20px'>Applications List (click to show)</summary>  
+  
 
 - [Apply NN to images project ](https://ecosystem.supervise.ly/apps/supervisely-ecosystem%252Fnn-image-labeling%252Fproject-dataset) - app allows to play with different inference options and visualize predictions in real time.  Once you choose inference settings you can apply model to all images in your project to visually analyse predictions and perform automatic data pre-labeling.   
    
@@ -54,7 +53,7 @@ You can use served model in next Supervisely Applications ⬇️
 - [NN Image Labeling](https://ecosystem.supervise.ly/apps/supervisely-ecosystem%252Fnn-image-labeling%252Fannotation-tool) - integrate any deployd NN to Supervisely Image Labeling UI. Configure inference settings and model output classes. Press `Apply` button (or use hotkey) and detections with their confidences will immediately appear on the image. 
    
     <img data-key="sly-module-link" data-module-slug="supervisely-ecosystem/nn-image-labeling/annotation-tool" src="https://i.imgur.com/hYEucNt.png" width="350px"/>
-</details>
+
 
 
 # Acknowledgment
