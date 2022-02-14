@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="#Overview">Overview</a> •
+   <a href="#available-models">Available models</a> •
   <a href="#How-To-Run">How To Run</a> •
   <a href="#Demo">Demo</a> •
   <a href="#Screenshot">Screenshot</a> •
@@ -43,9 +44,19 @@ Application key points:
 # Available models
 
 
+Detectron2 provides us **Mask R-CNN Instance Segmentation** baselines based on 3 different backbone combinations:
+1. FPN: Use a ResNet+FPN backbone with standard conv and FC heads for mask and box prediction, respectively. It obtains the best speed/accuracy tradeoff, but the other two are still useful for research.
+2. C4: Use a ResNet conv4 backbone with conv5 head. The original baseline in the Faster R-CNN paper.
+3. DC5 (Dilated-C5): Use a ResNet conv5 backbone with dilations in conv5, and standard conv and FC heads for mask and box prediction, respectively. This is used by the Deformable ConvNet paper.
+more about models
+
+We have integrated popular architectures into this application. 
+
 <details>
   <summary><b> Show available models</b> 🔻</summary>
 <br>
+  
+[ℹ️ You can find more information about each model here (use **model id**)](https://github.com/facebookresearch/detectron2/blob/main/MODEL_ZOO.md)
 
 ### pretrained on COCO
 
@@ -78,7 +89,7 @@ Application key points:
 |   R50-FPN   |   0.24   |   0.078   |   -   |   36.5   |   142423278   |
 
 
-### Others
+### others
 
 | model   | train time  (s/im)  | inference time  (s/im)  | box  AP  | mask  AP  | model id   |
 | --- | --- | --- | --- | --- | --- |
