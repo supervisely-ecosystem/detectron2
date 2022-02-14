@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="#Overview">Overview</a> •
-   <a href="#available-models">Available models</a> •
+   <a href="#Pretrained-models">Pretrained models</a> •
   <a href="#How-To-Run">How To Run</a> •
   <a href="#Demo">Demo</a> •
   <a href="#Screenshot">Screenshot</a> •
@@ -41,7 +41,7 @@ Application key points:
 - Preview model predictions in real time
 - Save trained models to Team Files
 
-# Available models
+# Pretrained models
 
 
 Detectron2 provides us **Mask R-CNN Instance Segmentation** baselines based on 3 different backbone combinations:
