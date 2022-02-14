@@ -53,7 +53,7 @@ more about models
 We have integrated popular architectures into this application. 
 
 <details>
-  <summary><b> Show available models</b> 🔻</summary>
+  <summary><b> Show integrated models</b> 🔻</summary>
 <br>
   
 [ℹ️ You can find more information about each model here (use **model id**)](https://github.com/facebookresearch/detectron2/blob/main/MODEL_ZOO.md)
