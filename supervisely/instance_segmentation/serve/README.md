@@ -43,7 +43,7 @@ more about models
 
 We have integrated popular architectures into this application. 
 
-<details>
+<details open>
   <summary><b> Show integrated models</b> 🔻</summary>
 <br>
   
