@@ -202,7 +202,12 @@ def get_model_path_by_id(model_id):
 
 
 def get_model_config(custom_config_path):
-    if custom_config_path.endswith('.json'):
+
+    if custom_config_path.endswith('.py'):
+        custom_config_path = os.path.join(g.models_configs_dir, custom_config_path)
+        cfg = LazyConfig.load(custom_config_path)
+
+    elif custom_config_path.endswith('.json'):
         with open(custom_config_path, 'r') as f:  # load custom config
             config_dict = json.load(f)
 
@@ -210,13 +215,6 @@ def get_model_config(custom_config_path):
         cfg = LazyConfig.load(base_config_path)
 
         cfg = update_config_by_custom(cfg, config_dict)
-
-        #
-        # pre, ext = os.path.splitext(config_path)  # changing extention to .yaml
-        # custom_config_path = pre + '.yaml'
-        # os.rename(config_path, custom_config_path)
-        # cfg = LazyConfig.load(custom_config_path)
-
     else:
         cfg = get_cfg()
         cfg.set_new_allowed(True)
