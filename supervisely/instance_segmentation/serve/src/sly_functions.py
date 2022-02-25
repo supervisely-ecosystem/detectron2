@@ -182,29 +182,54 @@ def download_model_weights():
                             extra={"weights": g.local_weights_path})
 
 
-def get_model_config(config_path):
-    if config_path.endswith('.py'):
-        if g.weights_type == 'custom':
-            pre, ext = os.path.splitext(config_path)  # changing extention to .yaml
-            custom_config_path = pre + '.yaml'
-            os.rename(config_path, custom_config_path)
-            cfg = LazyConfig.load(custom_config_path)
+def update_config_by_custom(cfg, updates):
+    for k, v in updates.items():
+        if isinstance(v, dict) and cfg.get(k) is not None:
+            cfg[k] = update_config_by_custom(cfg[k], v)
         else:
-            config_path = os.path.join(g.models_configs_dir, config_path)
-            cfg = LazyConfig.load(config_path)
+            cfg[k] = v
+
+    return cfg
+
+
+def get_model_path_by_id(model_id):
+    models_by_datasets = pretrained_models.get_pretrained_models()
+
+    for models_list_by_dataset in models_by_datasets.values():
+        for current_model in models_list_by_dataset:
+            if current_model['model_id'] == model_id:
+                return current_model['config']
+
+
+def get_model_config(custom_config_path):
+    if custom_config_path.endswith('.json'):
+        with open(custom_config_path, 'r') as f:  # load custom config
+            config_dict = json.load(f)
+
+        base_config_path = os.path.join(g.models_configs_dir, get_model_path_by_id(config_dict['model_id']))
+        cfg = LazyConfig.load(base_config_path)
+
+        cfg = update_config_by_custom(cfg, config_dict)
+
+        #
+        # pre, ext = os.path.splitext(config_path)  # changing extention to .yaml
+        # custom_config_path = pre + '.yaml'
+        # os.rename(config_path, custom_config_path)
+        # cfg = LazyConfig.load(custom_config_path)
+
     else:
         cfg = get_cfg()
         cfg.set_new_allowed(True)
         if g.weights_type == 'custom':
-            cfg.merge_from_file(config_path)
+            cfg.merge_from_file(custom_config_path)
         else:
-            config_path = os.path.join(g.models_configs_dir, config_path)
-            cfg.merge_from_file(config_path)
+            custom_config_path = os.path.join(g.models_configs_dir, custom_config_path)
+            cfg.merge_from_file(custom_config_path)
     return cfg
 
 
 def initialize_model(cfg, config_path):
-    if config_path.endswith('.py'):
+    if config_path.endswith('.py') or config_path.endswith('.json'):
         model = instantiate(cfg.model)
 
     else:
@@ -220,7 +245,7 @@ def download_custom_config():
 
     detectron_remote_dir = os.path.dirname(g.custom_weights_url)
 
-    for file_extension in ['.yaml', '.py']:
+    for file_extension in ['.yaml', '.json']:
         config_remote_dir = os.path.join(detectron_remote_dir, f'model_config{file_extension}')
         if g.api.file.exists(g.TEAM_ID, config_remote_dir):
             g.model_config_local_path += file_extension

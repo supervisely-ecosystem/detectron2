@@ -273,7 +273,7 @@ def set_trainer_parameters_by_state(state):
     config_path = f.get_config_path(state)
     cfg = f.get_model_config(config_path, state)
 
-    if config_path.endswith('.py'):
+    if config_path.endswith('.py') or config_path.endswith('.json'):
         # from UI — train
         cfg.dataloader.train.num_workers = state['numWorkers']
         cfg.dataloader.test.num_workers = state['numWorkers']
@@ -313,25 +313,15 @@ def set_trainer_parameters_by_state(state):
     return cfg
 
 
-def update_config_by_custom(cfg, updates):
-    for k, v in updates.items():
-        if isinstance(v, dict):
-            cfg[k] = update_config_by_custom(cfg[k], v)
-        else:
-            cfg[k] = v
-
-    return cfg
-
-
 def set_trainer_parameters_by_advanced_config(state):
     config_path = f.get_config_path(state)
     cfg = f.get_model_config(config_path, state)
 
     config_content = state['advancedConfig']['content']
 
-    if config_path.endswith('.py'):
+    if config_path.endswith('.py') or config_path.endswith('.json'):
         config_dict = json.loads(config_content)
-        cfg = update_config_by_custom(cfg, config_dict)
+        cfg = f.update_config_by_custom(cfg, config_dict)
     else:
         loaded_yaml = yaml.safe_load(config_content)
         yaml_cfg = CfgNode(loaded_yaml)
@@ -341,7 +331,9 @@ def set_trainer_parameters_by_advanced_config(state):
 
 def load_supervisely_parameters(cfg, state):
     config_path = f.get_config_path(state)
-    if config_path.endswith('.py'):
+    if config_path.endswith('.py') or config_path.endswith('.json'):
+        cfg['model_id'] = state['modelId']
+
         cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
         cfg.train.init_checkpoint = g.local_weights_path
         cfg.train['save_best_model'] = state['checkpointSaveBest']
@@ -380,10 +372,15 @@ def load_supervisely_parameters(cfg, state):
 
 
 def save_config_locally(cfg, config_path):
-    if config_path.endswith('.py'):
-        output_path = os.path.join(cfg.train.output_dir, 'model_config.py')
+    if config_path.endswith('.py') or config_path.endswith('.json'):
+        output_path = os.path.join(cfg.train.output_dir, 'model_config.json')
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        LazyConfig.save(cfg, output_path)
+
+        clear_config = step05_models.remove_not_scalars_dict(cfg)
+
+        with open(output_path, 'w') as file:
+            json.dump(clear_config, fp=file, indent=4)
+
     else:
         output_path = os.path.join(cfg.OUTPUT_DIR, 'model_config.yaml')
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -429,7 +426,7 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
 
 @g.my_app.callback("train")
 @sly.timeit
-# @g.my_app.ignore_errors_and_show_dialog_window()
+@g.my_app.ignore_errors_and_show_dialog_window()
 def train(api: sly.Api, task_id, context, state, app_logger):
     try:
         # convert project to segmentation masks
@@ -449,7 +446,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
 
         sly.logger.info(f'{config_path=}')
 
-        if config_path.endswith('.py'):
+        if config_path.endswith('.py') or config_path.endswith('.json'):
             g.sly_progresses['iter'].set_total(cfg.train.max_iter)
             output_dir = cfg.train.output_dir
         else:
@@ -464,7 +461,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
 
         save_config_locally(cfg, config_path)
 
-        if config_path.endswith('.py'):
+        if config_path.endswith('.py') or config_path.endswith('.json'):
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
             sly_plain_train_yaml_based.do_train(cfg=cfg)

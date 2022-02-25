@@ -82,7 +82,7 @@ def get_iters_num(state):
         return state['iters']
     else:
         config_path = f.get_config_path(state)
-        if config_path.endswith('.py'):
+        if config_path.endswith('.py') or config_path.endswith('.json'):
             return json.loads(state['advancedConfig']['content'])['train']['max_iter']
         else:
             return yaml.safe_load(state['advancedConfig']['content'])['SOLVER']['MAX_ITER']

@@ -37,6 +37,7 @@ def init(data, state):
                                 min_report_percent=5).init_data(data)
 
     state["weightsPath"] = ""
+    state['modelId'] = None
 
     data["done5"] = False
 
@@ -75,7 +76,7 @@ def get_default_config_for_model(state):
     config_path = f.get_config_path(state)
     cfg = f.get_model_config(config_path, state)
 
-    if config_path.endswith('.py'):
+    if config_path.endswith('.py') or config_path.endswith('.json'):
         return filter_lazy_config(cfg)
     else:
         return cfg.dump()
@@ -106,7 +107,7 @@ def download_custom_config(state):
     detectron_remote_dir = os.path.dirname(state["weightsPath"])
     g.model_config_local_path = os.path.join(g.my_app.data_dir, 'custom_local_model_config')
 
-    for file_extension in ['.yaml', '.py']:
+    for file_extension in ['.yaml', '.py', '.json']:
         config_remote_dir = os.path.join(detectron_remote_dir, f'model_config{file_extension}')
         if g.api.file.exists(g.team_id, config_remote_dir):
             g.model_config_local_path += file_extension
@@ -126,7 +127,7 @@ def dataset_changed(api: sly.Api, task_id, context, state, app_logger, fields_to
 
 def load_advanced_config(state, fields_to_update):
     config_path = f.get_config_path(state)
-    if config_path.endswith('.py'):
+    if config_path.endswith('.py') or config_path.endswith('.json'):
         fields_to_update['state.advancedConfig.options.mode'] = 'ace/mode/json'
     else:
         fields_to_update['state.advancedConfig.options.mode'] = 'ace/mode/yaml'
@@ -139,7 +140,7 @@ def load_advanced_config(state, fields_to_update):
 @g.my_app.callback("download_weights")
 @sly.timeit
 @sly.update_fields
-# @g.my_app.ignore_errors_and_show_dialog_window()
+@g.my_app.ignore_errors_and_show_dialog_window()
 def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
     # "https://download.pytorch.org/models/vgg11-8a719046.pth" to /root/.cache/torch/hub/checkpoints/vgg11-8a719046.pth
     # from train import model_list
@@ -162,11 +163,16 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
             download_sly_file(weights_path_remote, g.local_weights_path, progress)
             download_custom_config(state)
 
+            with open(g.model_config_local_path, 'r') as file:
+                fields_to_update['state.modelId'] = json.load(file).get('model_id')
+
         else:
             # get_pretrained_models()[state['pretrainedDataset']][]
             models_by_dataset = f.get_pretrained_models()[state["pretrainedDataset"]]
             selected_model = next(item for item in models_by_dataset
                                   if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
+
+            fields_to_update['state.modelId'] = selected_model.get('model_id')
 
             weights_url = selected_model.get('weightsUrl')
             if weights_url is not None:
