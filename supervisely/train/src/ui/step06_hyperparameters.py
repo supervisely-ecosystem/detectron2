@@ -48,8 +48,8 @@ def init(data, state):
 
     data['advancedConfigBackup'] = None
 
-    state["collapsed6"] = not True
-    state["disabled6"] = not True
+    state["collapsed6"] = True
+    state["disabled6"] = True
     data["done6"] = False
 
 
