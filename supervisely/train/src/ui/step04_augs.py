@@ -106,7 +106,7 @@ def init(data, state):
 
 
 def restart(data, state):
-    data["done5"] = False
+    data["done4"] = False
 
 
 @g.my_app.callback("load_existing_pipeline")
@@ -171,10 +171,12 @@ def preview_augs(api: sly.Api, task_id, context, state, app_logger):
 @g.my_app.ignore_errors_and_show_dialog_window()
 def use_augs(api: sly.Api, task_id, context, state, app_logger):
     if state["useAugs"] is True:
-        sly.json.dump_json_file(augs_json_config, g.augs_config_path)
+        sly.json.dump_json_file(augs_json_config, g.augs_origin_config_path)
         augs_py_path = os.path.join(g.info_dir, "augs_preview.py")
         with open(augs_py_path, 'w') as f:
             f.write(augs_py_preview)
+
+        g.augs_config_path = g.augs_origin_config_path
 
     else:
         g.augs_config_path = None
@@ -187,6 +189,3 @@ def use_augs(api: sly.Api, task_id, context, state, app_logger):
     ]
     g.api.app.set_fields(g.task_id, fields)
 
-
-def restart(data, state):
-    data["done4"] = False

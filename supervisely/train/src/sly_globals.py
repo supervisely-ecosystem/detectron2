@@ -56,7 +56,9 @@ sly.fs.mkdir(checkpoints_dir, remove_content_if_exists=True)  # remove content f
 visualizations_dir = os.path.join(artifacts_dir, "visualizations")
 sly.fs.mkdir(visualizations_dir, remove_content_if_exists=True)  # remove content for debug, has no effect in production
 
-augs_config_path = os.path.join(info_dir, "augs_config.json")
+augs_origin_config_path = os.path.join(info_dir, "augs_config.json")
+augs_config_path = None
+resize_dimensions = None
 
 local_weights_path = None
 model_config_local_path = None
@@ -77,4 +79,5 @@ iterations_to_add = 0
 
 
 seg_project_meta = None
+
 
