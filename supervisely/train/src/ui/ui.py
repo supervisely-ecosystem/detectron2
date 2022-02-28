@@ -58,8 +58,8 @@ def restart(api: sly.Api, task_id, context, state, app_logger):
     if restart_from_step <= 7:
         if restart_from_step == 7:
             raise NotImplementedError
-        else:
-            step07_train.init(data, state)
+        # else:
+        #     step07_train.init(data, state)
 
     fields = [
         {"field": "data", "payload": data, "append": True, "recursive": False},

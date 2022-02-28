@@ -12,12 +12,16 @@ import sly_functions as f
 def load_default_basic_config(state):
     state["expName"] = g.project_info.name
     state["numWorkers"] = 4  # 0 - for debug
-    state["batchSize"] = 2
-    state["batchSizePerImage"] = 128
+
     state["lr"] = 0.00025
     state["iters"] = 300
     state["gpusId"] = '0'
     state['evalInterval'] = 10
+
+    state["resizeImage"] = False
+    state["resizeImageSizes"] = {"height": 256, "width": 256}
+    state["batchSize"] = 2
+    state["batchSizePerImage"] = 128
 
     state['checkpointPeriod'] = 100
     state['checkpointMaxToKeep'] = 3
@@ -44,8 +48,8 @@ def init(data, state):
 
     data['advancedConfigBackup'] = None
 
-    state["collapsed6"] = True
-    state["disabled6"] = True
+    state["collapsed6"] = not True
+    state["disabled6"] = not True
     data["done6"] = False
 
 
@@ -108,8 +112,7 @@ def reset_configuration(api: sly.Api, task_id, context, state, app_logger, field
 @sly.timeit
 # @g.my_app.ignore_errors_and_show_dialog_window()
 def use_hyp(api: sly.Api, task_id, context, state, app_logger):
-    # input_height = state["imgSize"]["height"]
-    # input_width = state["imgSize"]["width"]
+
     #
     # if not check_crop_size(input_height, input_width):
     #     raise ValueError('Input image sizes should be divisible by 32, but train '
@@ -121,6 +124,14 @@ def use_hyp(api: sly.Api, task_id, context, state, app_logger):
     #                      'sizes (H x W : {val_crop_height} x {val_crop_width}) '
     #                      'are not.'.format(val_crop_height=input_height, val_crop_width=input_width))
     vis_step = calc_visualization_step(get_iters_num(state))
+
+    if state['resizeImage']:
+        g.resize_dimensions = {
+            'h': state['resizeImageSizes']['height'],
+            'w': state['resizeImageSizes']['width']
+        }
+    else:
+        g.resize_dimensions = None
 
     fields = [
         {"field": "state.visStep", "payload": vis_step},
