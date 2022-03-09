@@ -4,7 +4,7 @@ import pathlib
 import sys
 
 import supervisely_lib as sly
-
+import torch.cuda
 
 root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
 sly.logger.info(f"Root source directory: {root_source_path}")  # /detectron2/
@@ -26,8 +26,8 @@ model = None
 local_weights_path = None
 model_config_local_path = None
 
-
-device = f'cuda:{os.environ["modal.state.device"]}' if os.environ['modal.state.device'].isnumeric() else 'cpu'
+device = os.environ['modal.state.device'] if 'cuda' in os.environ[
+    'modal.state.device'] and torch.cuda.is_available() else 'cpu'
 print(device)
 
 weights_type = os.environ['modal.state.weightsInitialization']
