@@ -27,7 +27,7 @@ def inference_image_path(image_path, context, state, app_logger):
 
     im = cv2.imread(image_path)
     height, width = im.shape[:2]
-    d = {"image": torch.as_tensor(im.transpose(2, 0, 1).astype("float32"))}
+    d = {"image": torch.as_tensor(im.transpose(2, 0, 1).astype("float32")).to(g.device)}
 
     outputs = g.model([d])
     res = outputs[0]["instances"].to("cpu")

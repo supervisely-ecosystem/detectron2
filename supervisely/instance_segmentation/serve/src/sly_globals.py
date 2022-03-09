@@ -27,7 +27,8 @@ local_weights_path = None
 model_config_local_path = None
 
 
-device = f'{os.environ["modal.state.device"]}' if os.environ['modal.state.device'].isnumeric() else 'cpu'
+device = f'cuda:{os.environ["modal.state.device"]}' if os.environ['modal.state.device'].isnumeric() else 'cpu'
+print(device)
 
 weights_type = os.environ['modal.state.weightsInitialization']
 
