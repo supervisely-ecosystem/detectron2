@@ -9,7 +9,7 @@ import cv2
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.data.catalog import DatasetCatalog, Metadata, MetadataCatalog
 
-import supervisely as sly
+import supervisely_lib as sly
 from supervisely.app.v1.widgets.progress_bar import ProgressBar
 
 import sly_globals as g
