@@ -1,6 +1,8 @@
-# import supervisely_lib as sly
+# import supervisely as sly
+# from supervisely.app.v1.app_service import AppService
 #
-# my_app = sly.AppService()
+#
+# my_app = AppService()
 # api = my_app.public_api
 # task_id = my_app.task_id
 #
@@ -16,8 +18,7 @@
 #
 # sly.Project.to_segmentation_task(
 #             test_project_dir, test_project_dir_seg,
-#             target_classes=['lemon'],
-#
+#             target_classes=['lemon']
 #         )
 #
 # sly.Project.to_segmentation_task(test_project_dir)
