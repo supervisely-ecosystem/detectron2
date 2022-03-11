@@ -9,11 +9,11 @@ import cv2
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.data.catalog import DatasetCatalog, Metadata, MetadataCatalog
 
-import supervisely_lib as sly
+import supervisely as sly
 from supervisely.app.v1.widgets.progress_bar import ProgressBar
 
 import sly_globals as g
-from supervisely.instance_segmentation.serve.src import pretrained_models
+from supervisely_app.instance_segmentation.serve.src import pretrained_models
 
 from detectron2 import model_zoo  # config loaders
 from detectron2.config import get_cfg

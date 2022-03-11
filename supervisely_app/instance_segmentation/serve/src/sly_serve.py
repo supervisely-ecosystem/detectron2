@@ -5,10 +5,10 @@ import sys
 
 import requests
 import torch
-import supervisely_lib as sly
+import supervisely as sly
 
 from detectron2.engine import DefaultPredictor
-from supervisely_lib.io.fs import get_file_name_with_ext
+from supervisely.io.fs import get_file_name_with_ext
 from detectron2.config import get_cfg, CfgNode
 from detectron2 import model_zoo
 from pathlib import Path
