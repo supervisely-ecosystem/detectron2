@@ -9,10 +9,12 @@ import cv2
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.data.catalog import DatasetCatalog, Metadata, MetadataCatalog
 
-import supervisely_lib as sly
+import supervisely as sly
+from supervisely.app.v1.widgets.progress_bar import ProgressBar
 
 import sly_globals as g
-from supervisely.instance_segmentation.serve.src import pretrained_models
+import pretrained_models
+
 
 from detectron2 import model_zoo  # config loaders
 from detectron2.config import get_cfg
@@ -22,7 +24,8 @@ from detectron2.modeling import build_model  # model builders
 from detectron2.config import instantiate
 
 
-def inference_image_path(image_path, context, state, app_logger):
+@sly.process_image_roi
+def inference_image_path(image_path, project_meta, context, state, app_logger):
     app_logger.debug("Input path", extra={"path": image_path})
 
     im = cv2.imread(image_path)
@@ -73,7 +76,8 @@ def inference_image_url(api: sly.Api, task_id, context, state, app_logger):
     local_image_path = os.path.join(g.my_app.data_dir, sly.rand_str(15) + ext)
 
     sly.fs.download(image_url, local_image_path)
-    ann_json = inference_image_path(local_image_path, context, state, app_logger)
+    ann_json = inference_image_path(image_path=local_image_path, project_meta=g.meta,
+                                    context=context, state=state, app_logger=app_logger)
     sly.fs.silent_remove(local_image_path)
 
     request_id = context["request_id"]
@@ -88,7 +92,8 @@ def inference_image_id(api: sly.Api, task_id, context, state, app_logger):
     image_info = api.image.get_info_by_id(image_id)
     image_path = os.path.join(g.my_app.data_dir, sly.rand_str(10) + image_info.name)
     api.image.download_path(image_id, image_path)
-    ann_json = inference_image_path(image_path, context, state, app_logger)
+    ann_json = inference_image_path(image_path=image_path, project_meta=g.meta,
+                                    context=context, state=state, app_logger=app_logger)
     sly.fs.silent_remove(image_path)
     request_id = context["request_id"]
     g.my_app.send_response(request_id, data=ann_json)
@@ -107,7 +112,8 @@ def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
 
     results = []
     for image_path in paths:
-        ann_json = inference_image_path(image_path, context, state, app_logger)
+        ann_json = inference_image_path(image_path=image_path, project_meta=g.meta,
+                                        context=context, state=state, app_logger=app_logger)
         results.append(ann_json)
         sly.fs.silent_remove(image_path)
 
@@ -148,7 +154,7 @@ def download_sly_file(remote_path, local_path, progress):
 
 
 def download_model_weights():
-    progress = sly.app.widgets.ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
+    progress = ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
                                            min_report_percent=5)
 
     if g.weights_type == "custom":  # download from SLY FS
@@ -202,7 +208,6 @@ def get_model_path_by_id(model_id):
 
 
 def get_model_config(custom_config_path):
-
     if custom_config_path.endswith('.py'):
         custom_config_path = os.path.join(g.models_configs_dir, custom_config_path)
         cfg = LazyConfig.load(custom_config_path)
@@ -229,7 +234,6 @@ def get_model_config(custom_config_path):
 def initialize_model(cfg, config_path):
     if config_path.endswith('.py') or config_path.endswith('.json'):
         model = instantiate(cfg.model)
-
     else:
         model = build_model(cfg)
 
@@ -238,7 +242,7 @@ def initialize_model(cfg, config_path):
 
 
 def download_custom_config():
-    progress = sly.app.widgets.ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
+    progress = ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
                                            min_report_percent=5)
 
     detectron_remote_dir = os.path.dirname(g.custom_weights_url)
@@ -249,6 +253,7 @@ def download_custom_config():
             g.model_config_local_path += file_extension
             download_sly_file(config_remote_dir, g.model_config_local_path, progress)
             break
+
 
 def initialize_weights():
     if g.weights_type == 'custom':

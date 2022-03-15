@@ -29,12 +29,14 @@ from yacs.config import CfgNode
 
 import sly_plain_train_python_based
 import sly_train_results_visualizer
-from supervisely_lib.app.widgets import CompareGallery
+from supervisely.app.v1.widgets.compare_gallery import CompareGallery
+from supervisely.app.v1.widgets.progress_bar import ProgressBar
+from supervisely.app.v1.widgets.chart import Chart
 
 import step02_splits
 import step04_augs
 import step05_models
-import supervisely_lib as sly
+import supervisely as sly
 import sly_globals as g
 import step03_classes
 
@@ -93,14 +95,14 @@ def init_charts(data, state):
     state["smoothing"] = 0.6
 
     g.sly_charts = {
-        'lr': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLR",
+        'lr': Chart(g.task_id, g.api, "data.chartLR",
                                     title="LR", series_names=["LR"],
                                     yrange=[0, state["lr"] + state["lr"]],
                                     ydecimals=6, xdecimals=2),
-        'loss': sly.app.widgets.Chart(g.task_id, g.api, "data.chartLoss",
+        'loss': Chart(g.task_id, g.api, "data.chartLoss",
                                       title="Train Loss", series_names=["total", "mask", "box_reg"],
                                       smoothing=0.6, ydecimals=6, xdecimals=2),
-        'val_ap': sly.app.widgets.Chart(g.task_id, g.api, "data.chartAP",
+        'val_ap': Chart(g.task_id, g.api, "data.chartAP",
                                         title="Validation AP", series_names=["AP", "AP50", "AP75"],
                                         yrange=[0, 1],
                                         smoothing=0.6, ydecimals=6, xdecimals=2)
@@ -112,8 +114,8 @@ def init_charts(data, state):
 
 def init_progress_bars(data):
     g.sly_progresses = {
-        'iter': sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressIter", "Iteration"),
-        'other': sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther", "Progress")
+        'iter': ProgressBar(g.task_id, g.api, "data.progressIter", "Iteration"),
+        'other': ProgressBar(g.task_id, g.api, "data.progressOther", "Progress")
     }
 
     for current_progress in g.sly_progresses.values():
@@ -131,7 +133,7 @@ def _save_link_to_ui(local_dir, app_url):
 def upload_artifacts_and_log_progress(experiment_name):
     _save_link_to_ui(g.artifacts_dir, g.my_app.app_url)
 
-    def upload_monitor(monitor, api: sly.Api, task_id, progress: sly.app.widgets.ProgressBar):
+    def upload_monitor(monitor, api: sly.Api, task_id, progress: ProgressBar):
 
         if progress.get_total() is None:
             progress.set_total(monitor.len)
@@ -139,7 +141,7 @@ def upload_artifacts_and_log_progress(experiment_name):
             progress.set(monitor.bytes_read)
         progress.update()
 
-    progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther",
+    progress_other = ProgressBar(g.task_id, g.api, "data.progressOther",
                                                  "Upload directory with training artifacts to Team Files",
                                                  is_size=True, min_report_percent=1)
     progress_cb = partial(upload_monitor, api=g.api, task_id=g.task_id, progress=progress_other)
@@ -228,7 +230,7 @@ def convert_supervisely_to_segmentation(state):
     if sly.fs.dir_exists(project_dir_seg) is False:  # for debug, has no effect in production
         sly.fs.mkdir(project_dir_seg, remove_content_if_exists=True)
         global progress_other
-        progress_other = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progressOther",
+        progress_other = ProgressBar(g.task_id, g.api, "data.progressOther",
                                                      "Convert SLY annotations to segmentation masks",
                                                      sly.Project(g.project_dir, sly.OpenMode.READ).total_items)
         sly.Project.to_segmentation_task(

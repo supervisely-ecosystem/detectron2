@@ -11,7 +11,8 @@ from detectron2 import model_zoo
 
 import sly_globals as g
 import sly_functions as f
-import supervisely_lib as sly
+import supervisely as sly
+from supervisely.app.v1.widgets.progress_bar import ProgressBar
 
 
 def init(data, state):
@@ -33,7 +34,7 @@ def init(data, state):
 
     state["loadingModel"] = False
 
-    sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progress5", "Download weights", is_size=True,
+    ProgressBar(g.task_id, g.api, "data.progress5", "Download weights", is_size=True,
                                 min_report_percent=5).init_data(data)
 
     state["weightsPath"] = ""
@@ -101,7 +102,7 @@ def download_sly_file(remote_path, local_path, progress):
 
 
 def download_custom_config(state):
-    progress = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progress5", "Download weights", is_size=True,
+    progress = ProgressBar(g.task_id, g.api, "data.progress5", "Download weights", is_size=True,
                                            min_report_percent=5)
 
     detectron_remote_dir = os.path.dirname(state["weightsPath"])
@@ -146,7 +147,7 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
     # from train import model_list
     fields_to_update['state.loadingModel'] = False
 
-    progress = sly.app.widgets.ProgressBar(g.task_id, g.api, "data.progress5", "Download weights", is_size=True,
+    progress = ProgressBar(g.task_id, g.api, "data.progress5", "Download weights", is_size=True,
                                            min_report_percent=5)
     try:
         if state["weightsInitialization"] == "custom":

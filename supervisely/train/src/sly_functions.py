@@ -8,7 +8,7 @@ import pycocotools.mask
 
 from detectron2.structures import BoxMode
 
-import supervisely_lib as sly
+import supervisely as sly
 import sly_globals as g
 
 from detectron2.config import get_cfg, LazyConfig

@@ -5,7 +5,7 @@ from typing import Optional
 
 from detectron2.utils.events import EventWriter
 
-from supervisely_lib.app.widgets import CompareGallery
+from supervisely.app.v1.widgets.compare_gallery import CompareGallery
 
 import sly_globals as g
 import os

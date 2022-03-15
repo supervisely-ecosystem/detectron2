@@ -62,7 +62,7 @@ from detectron2.utils.events import EventStorage, EventWriter, get_event_storage
 from detectron2.data import DatasetMapper
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
-import supervisely_lib as sly
+import supervisely as sly
 import sly_globals as g
 import sly_train_results_visualizer
 import sly_functions as f

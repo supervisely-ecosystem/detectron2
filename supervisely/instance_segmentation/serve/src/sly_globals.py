@@ -3,7 +3,8 @@ import os
 import pathlib
 import sys
 
-import supervisely_lib as sly
+import supervisely as sly
+from supervisely.app.v1.app_service import AppService
 import torch.cuda
 
 root_source_path = str(pathlib.Path(sys.argv[0]).parents[4])
@@ -14,7 +15,7 @@ models_configs_dir = os.path.join(root_source_path, "configs")
 print(f"Models configs directory: {models_configs_dir}")  # /detectron2/configs
 sys.path.append(models_configs_dir)
 
-my_app = sly.AppService()
+my_app = AppService()
 api = my_app.public_api
 
 TASK_ID = my_app.task_id
