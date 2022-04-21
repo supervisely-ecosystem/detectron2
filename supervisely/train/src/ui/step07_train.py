@@ -347,9 +347,11 @@ def load_supervisely_parameters(cfg, state):
 
         cfg.dataloader.train.mapper['instance_mask_format'] = 'bitmask'
         cfg.dataloader.train.mapper["use_instance_mask"] = True
+        cfg.dataloader.train.mapper["image_format"] = 'BGR'
 
         cfg.dataloader.test.mapper['instance_mask_format'] = 'bitmask'
         cfg.dataloader.test.mapper["use_instance_mask"] = True
+        cfg.dataloader.test.mapper["image_format"] = 'BGR'
 
         cfg.dataloader.train.dataset.names = "main_train"
         cfg.dataloader.test.dataset.names = "main_validation"
