@@ -16,8 +16,11 @@
   "isolate": true,
   "need_gpu": true,
   "context_menu": {
-    "target": ["images_project"],
+    "target": [
+      "images_project"
+    ],
     "context_root": "Neural Networks"
   },
-  "instance_version": "6.4.33"
+  "instance_version": "6.4.33",
+  "poster": "https://imgur.com/T7nLLdH.png"
 }
