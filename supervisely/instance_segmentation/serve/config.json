@@ -3,8 +3,11 @@
   "type": "app",
   "categories": [
     "neural network",
-    "detection",
-    "instance segmentation"
+    "images",
+    "videos",
+    "instance segmentation",
+    "segmentation & tracking",
+    "serve"
   ],
   "description": "Deploy model as REST API service",
   "docker_image": "supervisely/detectron2:1.0.1",
