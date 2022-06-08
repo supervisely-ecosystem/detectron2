@@ -23,6 +23,8 @@ from detectron2.config import LazyConfig
 from detectron2.modeling import build_model  # model builders
 from detectron2.config import instantiate
 
+import sly_apply_nn_to_video as nn_to_video
+
 
 @sly.process_image_roi
 def inference_image_path(image_path, project_meta, context, state, app_logger):
@@ -110,15 +112,50 @@ def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
         paths.append(os.path.join(g.my_app.data_dir, sly.rand_str(10) + info.name))
     api.image.download_paths(infos[0].dataset_id, ids, paths)
 
-    results = []
-    for image_path in paths:
-        ann_json = inference_image_path(image_path=image_path, project_meta=g.meta,
-                                        context=context, state=state, app_logger=app_logger)
-        results.append(ann_json)
-        sly.fs.silent_remove(image_path)
+    annotations = f.inference_images_dir(img_paths=paths,
+                                         context=context,
+                                         state=state,
+                                         app_logger=app_logger)
 
     request_id = context["request_id"]
-    g.my_app.send_response(request_id, data=results)
+    g.my_app.send_response(request_id, data=annotations)
+
+
+
+@g.my_app.callback("inference_video_id")
+@sly.timeit
+@send_error_data
+def inference_video_id(api: sly.Api, task_id, context, state, app_logger):
+    video_info = g.api.video.get_info_by_id(state['videoId'])
+    inf_video_interface = nn_to_video.InferenceVideoInterface(api=g.api,
+                                                              start_frame_index=state.get('startFrameIndex', 0),
+                                                              frames_count=state.get('framesCount', video_info.frames_count - 1),
+                                                              frames_direction=state.get('framesDirection', 'forward'),
+                                                              video_info=video_info,
+                                                              imgs_dir=os.path.join(g.my_app.data_dir, 'videoInference'))
+
+    inf_video_interface.download_frames()
+
+    annotations = f.inference_images_dir(img_paths=inf_video_interface.images_paths,
+                                         context=context,
+                                         state=state,
+                                         app_logger=app_logger)
+
+    g.my_app.send_response(context["request_id"], data={'ann': annotations})
+    g.logger.info(f'inference {video_info.id=} done, {len(annotations)} annotations created')
+
+
+def inference_images_dir(img_paths, context, state, app_logger):
+    annotations = []
+    for image_path in img_paths:
+        ann_json = inference_image_path(image_path=image_path,
+                                        project_meta=g.meta,
+                                        context=context,
+                                        state=state,
+                                        app_logger=app_logger)
+        annotations.append(ann_json)
+        sly.fs.silent_remove(image_path)
+    return annotations
 
 
 def construct_model_meta():

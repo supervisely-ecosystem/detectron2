@@ -45,6 +45,9 @@ def get_custom_inference_settings(api: sly.Api, task_id, context, state, app_log
     g.my_app.send_response(request_id, data={"settings": {}})  # send model config here
 
 
+
+
+
 @sly.timeit
 def init_model():
     f.download_model_weights()
