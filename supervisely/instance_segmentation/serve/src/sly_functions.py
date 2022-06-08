@@ -17,7 +17,6 @@ from supervisely.app.v1.widgets.progress_bar import ProgressBar
 import sly_globals as g
 import pretrained_models
 
-
 from detectron2 import model_zoo  # config loaders
 from detectron2.config import get_cfg
 from detectron2.config import LazyConfig
@@ -26,7 +25,6 @@ from detectron2.modeling import build_model  # model builders
 from detectron2.config import instantiate
 
 import sly_apply_nn_to_video as nn_to_video
-
 
 
 def send_error_data(func):
@@ -45,7 +43,9 @@ def send_error_data(func):
             except Exception as ex:
                 sly.logger.exception(f"Cannot send error response: {ex}")
         return value
+
     return wrapper
+
 
 @sly.process_image_roi
 def inference_image_path(image_path, project_meta, context, state, app_logger):
@@ -136,14 +136,13 @@ def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
         paths.append(os.path.join(g.my_app.data_dir, sly.rand_str(10) + info.name))
     api.image.download_paths(infos[0].dataset_id, ids, paths)
 
-    annotations = f.inference_images_dir(img_paths=paths,
-                                         context=context,
-                                         state=state,
-                                         app_logger=app_logger)
+    annotations = inference_images_dir(img_paths=paths,
+                                       context=context,
+                                       state=state,
+                                       app_logger=app_logger)
 
     request_id = context["request_id"]
     g.my_app.send_response(request_id, data=annotations)
-
 
 
 @g.my_app.callback("inference_video_id")
@@ -153,17 +152,19 @@ def inference_video_id(api: sly.Api, task_id, context, state, app_logger):
     video_info = g.api.video.get_info_by_id(state['videoId'])
     inf_video_interface = nn_to_video.InferenceVideoInterface(api=g.api,
                                                               start_frame_index=state.get('startFrameIndex', 0),
-                                                              frames_count=state.get('framesCount', video_info.frames_count - 1),
+                                                              frames_count=state.get('framesCount',
+                                                                                     video_info.frames_count - 1),
                                                               frames_direction=state.get('framesDirection', 'forward'),
                                                               video_info=video_info,
-                                                              imgs_dir=os.path.join(g.my_app.data_dir, 'videoInference'))
+                                                              imgs_dir=os.path.join(g.my_app.data_dir,
+                                                                                    'videoInference'))
 
     inf_video_interface.download_frames()
 
-    annotations = f.inference_images_dir(img_paths=inf_video_interface.images_paths,
-                                         context=context,
-                                         state=state,
-                                         app_logger=app_logger)
+    annotations = inference_images_dir(img_paths=inf_video_interface.images_paths,
+                                       context=context,
+                                       state=state,
+                                       app_logger=app_logger)
 
     g.my_app.send_response(context["request_id"], data={'ann': annotations})
     g.logger.info(f'inference {video_info.id=} done, {len(annotations)} annotations created')
@@ -216,7 +217,7 @@ def download_sly_file(remote_path, local_path, progress):
 
 def download_model_weights():
     progress = ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
-                                           min_report_percent=5)
+                           min_report_percent=5)
 
     if g.weights_type == "custom":  # download from SLY FS
         if not g.custom_weights_url.endswith(".pth"):
@@ -304,7 +305,7 @@ def initialize_model(cfg, config_path):
 
 def download_custom_config():
     progress = ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
-                                           min_report_percent=5)
+                           min_report_percent=5)
 
     detectron_remote_dir = os.path.dirname(g.custom_weights_url)
 
