@@ -167,7 +167,7 @@ def inference_video_id(api: sly.Api, task_id, context, state, app_logger):
                                        app_logger=app_logger)
 
     g.my_app.send_response(context["request_id"], data={'ann': annotations})
-    g.logger.info(f'inference {video_info.id=} done, {len(annotations)} annotations created')
+    sly.logger.info(f'inference {video_info.id=} done, {len(annotations)} annotations created')
 
 
 def inference_images_dir(img_paths, context, state, app_logger):
