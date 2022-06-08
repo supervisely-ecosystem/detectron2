@@ -49,6 +49,13 @@ def send_error_data(func):
 
 @sly.process_image_roi
 def inference_image_path(image_path, project_meta, context, state, app_logger):
+    settings = state.get("settings", {})
+    for key, value in g.default_settings.items():
+        if key not in settings:
+            app_logger.warn("Field {!r} not found in inference settings. Use default value {!r}".format(key, value))
+
+    conf_thres = settings.get("conf_thres", g.default_settings["conf_thres"])
+
     app_logger.debug("Input path", extra={"path": image_path})
 
     im = cv2.imread(image_path)
@@ -66,8 +73,8 @@ def inference_image_path(image_path, project_meta, context, state, app_logger):
 
     classes_str = MetadataCatalog.get('eval').thing_classes
     for mask, score, curr_class_idx in zip(masks, scores, classes):
-        # top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
-        # rect = sly.Rectangle(top, left, bottom, right)
+        if score < conf_thres:
+            continue
 
         mask = mask.detach().cpu().numpy()
         if True in mask:
