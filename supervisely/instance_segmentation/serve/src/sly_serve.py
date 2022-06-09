@@ -29,10 +29,12 @@ def get_output_classes_and_tags(api: sly.Api, task_id, context, state, app_logge
 def get_session_info(api: sly.Api, task_id, context, state, app_logger):
     info = {
         "app": "Detectron2 serve",
+        "type": "Instance Segmentation",
         "device": str(g.device),
         "session_id": task_id,
         "classes_count": len(g.meta.obj_classes),
         "tags_count": len(g.meta.tag_metas),
+        "videos_support": True
     }
     request_id = context["request_id"]
     g.my_app.send_response(request_id, data=info)
@@ -42,7 +44,8 @@ def get_session_info(api: sly.Api, task_id, context, state, app_logger):
 @sly.timeit
 def get_custom_inference_settings(api: sly.Api, task_id, context, state, app_logger):
     request_id = context["request_id"]
-    g.my_app.send_response(request_id, data={"settings": {}})  # send model config here
+    g.my_app.send_response(request_id, data={"settings": g.default_settings_str})
+
 
 
 @sly.timeit

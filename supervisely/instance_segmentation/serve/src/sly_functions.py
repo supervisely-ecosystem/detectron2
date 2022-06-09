@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 
+import functools
+
 import requests
 import torch
 import cv2
@@ -15,7 +17,6 @@ from supervisely.app.v1.widgets.progress_bar import ProgressBar
 import sly_globals as g
 import pretrained_models
 
-
 from detectron2 import model_zoo  # config loaders
 from detectron2.config import get_cfg
 from detectron2.config import LazyConfig
@@ -23,9 +24,38 @@ from detectron2.config import LazyConfig
 from detectron2.modeling import build_model  # model builders
 from detectron2.config import instantiate
 
+import sly_apply_nn_to_video as nn_to_video
+
+
+def send_error_data(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        value = None
+        try:
+            value = func(*args, **kwargs)
+        except Exception as e:
+            sly.logger.error(f"Error while processing data: {e}")
+            request_id = kwargs["context"]["request_id"]
+            # raise e
+            try:
+                g.my_app.send_response(request_id, data={"error": repr(e)})
+                print(traceback.format_exc())
+            except Exception as ex:
+                sly.logger.exception(f"Cannot send error response: {ex}")
+        return value
+
+    return wrapper
+
 
 @sly.process_image_roi
 def inference_image_path(image_path, project_meta, context, state, app_logger):
+    settings = state.get("settings", {})
+    for key, value in g.default_settings.items():
+        if key not in settings:
+            app_logger.warn("Field {!r} not found in inference settings. Use default value {!r}".format(key, value))
+
+    conf_thres = settings.get("conf_thres", g.default_settings["conf_thres"])
+
     app_logger.debug("Input path", extra={"path": image_path})
 
     im = cv2.imread(image_path)
@@ -43,8 +73,8 @@ def inference_image_path(image_path, project_meta, context, state, app_logger):
 
     classes_str = MetadataCatalog.get('eval').thing_classes
     for mask, score, curr_class_idx in zip(masks, scores, classes):
-        # top, left, bottom, right = int(bbox[1]), int(bbox[0]), int(bbox[3]), int(bbox[2])
-        # rect = sly.Rectangle(top, left, bottom, right)
+        if score < conf_thres:
+            continue
 
         mask = mask.detach().cpu().numpy()
         if True in mask:
@@ -66,6 +96,7 @@ def inference_image_path(image_path, project_meta, context, state, app_logger):
 
 @g.my_app.callback("inference_image_url")
 @sly.timeit
+@send_error_data
 def inference_image_url(api: sly.Api, task_id, context, state, app_logger):
     app_logger.debug("Input data", extra={"state": state})
 
@@ -86,6 +117,7 @@ def inference_image_url(api: sly.Api, task_id, context, state, app_logger):
 
 @g.my_app.callback("inference_image_id")
 @sly.timeit
+@send_error_data
 def inference_image_id(api: sly.Api, task_id, context, state, app_logger):
     app_logger.debug("Input data", extra={"state": state})
     image_id = state["image_id"]
@@ -101,6 +133,7 @@ def inference_image_id(api: sly.Api, task_id, context, state, app_logger):
 
 @g.my_app.callback("inference_batch_ids")
 @sly.timeit
+@send_error_data
 def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
     app_logger.debug("Input data", extra={"state": state})
     ids = state["batch_ids"]
@@ -110,15 +143,52 @@ def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
         paths.append(os.path.join(g.my_app.data_dir, sly.rand_str(10) + info.name))
     api.image.download_paths(infos[0].dataset_id, ids, paths)
 
-    results = []
-    for image_path in paths:
-        ann_json = inference_image_path(image_path=image_path, project_meta=g.meta,
-                                        context=context, state=state, app_logger=app_logger)
-        results.append(ann_json)
-        sly.fs.silent_remove(image_path)
+    annotations = inference_images_dir(img_paths=paths,
+                                       context=context,
+                                       state=state,
+                                       app_logger=app_logger)
 
     request_id = context["request_id"]
-    g.my_app.send_response(request_id, data=results)
+    g.my_app.send_response(request_id, data=annotations)
+
+
+@g.my_app.callback("inference_video_id")
+@sly.timeit
+@send_error_data
+def inference_video_id(api: sly.Api, task_id, context, state, app_logger):
+    video_info = g.api.video.get_info_by_id(state['videoId'])
+
+    sly.logger.info(f'start inference {video_info.id=}')
+    inf_video_interface = nn_to_video.InferenceVideoInterface(api=g.api,
+                                                              start_frame_index=state.get('startFrameIndex', 0),
+                                                              frames_count=state.get('framesCount',
+                                                                                     video_info.frames_count - 1),
+                                                              frames_direction=state.get('framesDirection', 'forward'),
+                                                              video_info=video_info,
+                                                              imgs_dir=os.path.join(g.my_app.data_dir, 'videoInference'))
+
+    inf_video_interface.download_frames()
+
+    annotations = inference_images_dir(img_paths=inf_video_interface.images_paths,
+                                       context=context,
+                                       state=state,
+                                       app_logger=app_logger)
+
+    g.my_app.send_response(context["request_id"], data={'ann': annotations})
+    sly.logger.info(f'inference {video_info.id=} done, {len(annotations)} annotations created')
+
+
+def inference_images_dir(img_paths, context, state, app_logger):
+    annotations = []
+    for image_path in img_paths:
+        ann_json = inference_image_path(image_path=image_path,
+                                        project_meta=g.meta,
+                                        context=context,
+                                        state=state,
+                                        app_logger=app_logger)
+        annotations.append(ann_json)
+        sly.fs.silent_remove(image_path)
+    return annotations
 
 
 def construct_model_meta():
@@ -155,7 +225,7 @@ def download_sly_file(remote_path, local_path, progress):
 
 def download_model_weights():
     progress = ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
-                                           min_report_percent=5)
+                           min_report_percent=5)
 
     if g.weights_type == "custom":  # download from SLY FS
         if not g.custom_weights_url.endswith(".pth"):
@@ -243,7 +313,7 @@ def initialize_model(cfg, config_path):
 
 def download_custom_config():
     progress = ProgressBar(g.TASK_ID, g.api, "data.progress5", "Download weights", is_size=True,
-                                           min_report_percent=5)
+                           min_report_percent=5)
 
     detectron_remote_dir = os.path.dirname(g.custom_weights_url)
 

@@ -3,6 +3,8 @@ import os
 import pathlib
 import sys
 
+import yaml
+
 import supervisely as sly
 from supervisely.app.v1.app_service import AppService
 import torch.cuda
@@ -40,3 +42,12 @@ selected_model = os.environ[f'modal.state.selectedModel.{selected_pretrained_dat
 # selected_model = json.loads(os.environ['modal.state.selectedModel'])
 
 custom_weights_url = os.environ['modal.state.weightsPath']
+
+
+settings_path = os.path.join(root_source_path, "supervisely/instance_segmentation/serve/custom_settings.yaml")
+sly.logger.info(f"Custom inference settings path: {settings_path}")
+with open(settings_path, 'r') as file:
+    default_settings_str = file.read()
+    default_settings = yaml.safe_load(default_settings_str)
+
+

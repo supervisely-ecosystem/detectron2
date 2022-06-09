@@ -1,0 +1,2 @@
+# object confidence threshold (for debug 0.001)
+conf_thres: 0.45
