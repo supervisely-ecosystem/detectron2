@@ -157,14 +157,15 @@ def inference_batch_ids(api: sly.Api, task_id, context, state, app_logger):
 @send_error_data
 def inference_video_id(api: sly.Api, task_id, context, state, app_logger):
     video_info = g.api.video.get_info_by_id(state['videoId'])
+
+    sly.logger.info(f'start inference video {state["videoId"]}')
     inf_video_interface = nn_to_video.InferenceVideoInterface(api=g.api,
                                                               start_frame_index=state.get('startFrameIndex', 0),
                                                               frames_count=state.get('framesCount',
                                                                                      video_info.frames_count - 1),
                                                               frames_direction=state.get('framesDirection', 'forward'),
                                                               video_info=video_info,
-                                                              imgs_dir=os.path.join(g.my_app.data_dir,
-                                                                                    'videoInference'))
+                                                              imgs_dir=os.path.join(g.my_app.data_dir, 'videoInference'))
 
     inf_video_interface.download_frames()
 

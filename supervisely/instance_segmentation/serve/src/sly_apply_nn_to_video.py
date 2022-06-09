@@ -34,7 +34,7 @@ class InferenceVideoInterface:
 
         os.makedirs(self._frames_path, exist_ok=True)
 
-        sly.logger.info(f'{self.__class__.__name__} initialized')
+
 
     def _add_frames_indexes(self):
         total_frames = self.video_info.frames_count
