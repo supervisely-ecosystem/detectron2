@@ -11,6 +11,7 @@
   ],
   "description": "Deploy model as REST API service",
   "docker_image": "supervisely/detectron2:1.0.1",
+  "instance_version": "6.4.57",
   "main_script": "supervisely/instance_segmentation/serve/src/sly_serve.py",
   "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
   "modal_width": 1040,
@@ -255,7 +256,6 @@
   "isolate": true,
   "need_gpu": true,
   "headless": true,
-  "instance_version": "6.4.33",
   "session_tags": [
     "deployed_nn"
   ],

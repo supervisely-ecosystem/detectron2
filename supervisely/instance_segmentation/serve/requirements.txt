@@ -1,4 +1,5 @@
-supervisely[apps]==6.7.21
+supervisely==6.23.1
+supervisely[apps]==6.23.1
 
 ffmpeg-python==0.2.0
 PyYAML==5.4.1
