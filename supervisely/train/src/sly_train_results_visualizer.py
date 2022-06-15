@@ -59,7 +59,7 @@ def append_gallery(gt_image, pred_image):
 
     fields = [
         {"field": "data.previewPredLinks",
-         "payload": [[file_info_gt.full_storage_url, file_info_pred.full_storage_url]], "append": True},
+         "payload": [[file_info_gt.storage_path, file_info_pred.storage_path]], "append": True},
     ]
 
     g.api.app.set_fields(g.task_id, fields)
