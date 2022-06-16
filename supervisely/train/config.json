@@ -26,5 +26,6 @@
     ],
     "context_root": "Neural Networks"
   },
-  "poster": "https://imgur.com/T7nLLdH.png"
+  "poster": "https://imgur.com/T7nLLdH.png",
+  "community_agent": false
 }
