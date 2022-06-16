@@ -259,5 +259,6 @@
   "session_tags": [
     "deployed_nn"
   ],
-  "poster": "https://imgur.com/jIOW3zu.png"
+  "poster": "https://imgur.com/jIOW3zu.png",
+  "community_agent": false
 }
