@@ -10,7 +10,7 @@
     "serve"
   ],
   "description": "Deploy model as REST API service",
-  "docker_image": "supervisely/detectron2:1.0.1",
+  "docker_image": "supervisely/detectron2:1.0.2",
   "instance_version": "6.4.57",
   "main_script": "supervisely/instance_segmentation/serve/src/sly_serve.py",
   "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
