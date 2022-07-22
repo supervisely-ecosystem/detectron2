@@ -25,6 +25,7 @@ from detectron2.modeling import build_model  # model builders
 from detectron2.config import instantiate
 
 import sly_apply_nn_to_video as nn_to_video
+import traceback
 
 
 def send_error_data(func):
