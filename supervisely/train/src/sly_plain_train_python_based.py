@@ -435,7 +435,7 @@ def do_train(cfg, resume=False):
                     scheduler.step()
                 except:
                     pass
-
+                torch.cuda.empty_cache()
                 if (
                         cfg.train.eval_period > 0
                         and iteration % cfg.train.eval_period == 0
@@ -443,6 +443,7 @@ def do_train(cfg, resume=False):
                 ):
                     try:
                         results = do_test(cfg, model, iteration)
+                        torch.cuda.empty_cache()
 
                         if cfg.train.save_best_model:
                             f.save_best_model(checkpointer, best_model_info, results, iteration)
@@ -458,6 +459,7 @@ def do_train(cfg, resume=False):
                 ):
                     try:
                         results = do_test(cfg, model, iteration)
+                        torch.cuda.empty_cache()
                         visualize_results(cfg, model)
 
                         if cfg.train.save_best_model:
