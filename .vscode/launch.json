@@ -1,0 +1,51 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/supervisely/instance_segmentation/serve/src/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "LOG_LEVEL": "DEBUG",
+                "PYTHONPATH": "${workspaceFolder}:${PYTHONPATH}",
+            }
+        },
+        {
+            "name": "Advanced mode for Supervisely Team",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "main:m.app",
+                "--app-dir",
+                "./supervisely/instance_segmentation/serve/src",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+                "--ws",
+                "websockets"
+            ],
+            "jinja": true,
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}:${PYTHONPATH}",
+                "LOG_LEVEL": "DEBUG",
+                "ENV": "production",
+                "TEAM_ID": "277",
+                "WORKSPACE_ID": "403",
+                "DEBUG_WITH_SLY_NET": "1",
+                "SLY_APP_DATA_DIR": "${workspaceFolder}/results",
+                "modal.state.device": "cuda:0",
+                "modal.state.weightsInitialization": "pretrained",
+                "modal.state.pretrainedDataset": "COCO",
+                "modal.state.selectedModel.COCO": "regnetx_4gf_dds_FPN (100)",
+                "modal.state.weightsPath": "",
+                "modal.state.selectedModel": "{ 'COCO': 'regnetx_4gf_dds_FPN (100)', 'LVIS': 'R50-FPN', 'Cityscapes': 'R50-FPN', 'Others': 'Deformable Conv (3x)' }",
+            }
+        }
+    ]
+}

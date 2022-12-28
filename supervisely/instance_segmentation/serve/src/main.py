@@ -7,7 +7,7 @@ import json
 from dotenv import load_dotenv
 import torch
 import supervisely as sly
-import src.pretrained_models as pretrained_models
+import pretrained_models
 
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg, LazyConfig, instantiate
