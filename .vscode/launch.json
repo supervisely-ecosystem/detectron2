@@ -42,9 +42,8 @@
                 "modal.state.device": "cuda:0",
                 "modal.state.weightsInitialization": "pretrained",
                 "modal.state.pretrainedDataset": "COCO",
-                "modal.state.selectedModel.COCO": "regnetx_4gf_dds_FPN (100)",
+                "modal.state.selectedModel.COCO": "R50-DC5 (3x)",
                 "modal.state.weightsPath": "",
-                "modal.state.selectedModel": "{ 'COCO': 'regnetx_4gf_dds_FPN (100)', 'LVIS': 'R50-FPN', 'Cityscapes': 'R50-FPN', 'Others': 'Deformable Conv (3x)' }",
             }
         }
     ]

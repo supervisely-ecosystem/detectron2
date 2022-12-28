@@ -18,6 +18,7 @@ from detectron2.modeling import build_model
 load_dotenv("local.env")
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 
+api = sly.Api()
 root_source_path = str(Path(__file__).parents[4])
 app_source_path = str(Path(__file__).parents[1])
 models_configs_dir = os.path.join(root_source_path, "configs")
@@ -51,14 +52,8 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
 
         # get model and config paths
         if model_weights_option == "custom":
-            weights_path = os.path.join(self.location, os.path.basename(custom_weights))
-            for file_extension in ['.yaml', '.json', '.py']:
-                temp_config_path = os.path.join(self.location, f'model_config{file_extension}')
-                if sly.fs.exists(config_path):
-                    config_path = temp_config_path
-                    break
-            if config_path is None:
-                raise FileNotFoundError("Config with name 'model_config' ('.yaml', '.json' or '.py') not found in model weights directory.")
+            weights_path = self.location[0]
+            config_path = self.location[1]
         elif model_weights_option == "pretrained":
             weights_path = self.location
             config_path = os.path.join(models_configs_dir, selected_model_dict.get('config'))
@@ -80,11 +75,7 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         else:
             cfg = get_cfg()
             cfg.set_new_allowed(True)
-            if model_weights_option == 'custom':
-                cfg.merge_from_file(config_path)
-            else:
-                config_path = os.path.join(models_configs_dir, config_path)
-                cfg.merge_from_file(config_path)
+            cfg.merge_from_file(config_path)
         
         if config_path.endswith('.py') or config_path.endswith('.json'):
             model = instantiate(cfg.model)
@@ -160,14 +151,12 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
     ) -> List[sly.nn.PredictionMask]:
         confidence_threshold = settings.get("conf_thres", 0.5)
         image = cv2.imread(image_path)  # BGR
-        d = {"image": torch.as_tensor(image.transpose(2, 0, 1).astype("float32")).to(device)}
-        ####### CUSTOM CODE FOR MY MODEL STARTS (e.g. DETECTRON2) #######
-        outputs = self.predictor(image)  # get predictions from Detectron2 model
+        input_data = [{"image": torch.as_tensor(image.transpose(2, 0, 1).astype("float32")).to(device)}]
+        outputs = self.predictor(input_data)  # get predictions from Detectron2 model
         pred_classes = outputs["instances"].pred_classes.detach().numpy()
         pred_class_names = [self.class_names[pred_class] for pred_class in pred_classes]
         pred_scores = outputs["instances"].scores.detach().numpy().tolist()
         pred_masks = outputs["instances"].pred_masks.detach().numpy()
-        ####### CUSTOM CODE FOR MY MODEL ENDS (e.g. DETECTRON2)  ########
 
         results = []
         for score, class_name, mask in zip(pred_scores, pred_class_names, pred_masks):
@@ -188,9 +177,23 @@ sly.logger.info("Script arguments", extra={
 print("Using device:", device)
 
 if model_weights_option == "custom":
-    location = os.path.dirname(custom_weights)
+    model_dir = os.path.dirname(custom_weights)
+    config_path = None
+    for file_extension in ['.yaml', '.json', '.py']:
+        temp_config_path = os.path.join(model_dir, f'model_config{file_extension}')
+        if api.file.exists(sly.env.team_id(), temp_config_path):
+            config_path = temp_config_path
+            break
+    
+    if config_path is None:
+        raise FileNotFoundError("Config with name 'model_config' ('.yaml', '.json' or '.py') not found in model weights directory.")
+    location = [
+        custom_weights,
+        config_path
+    ]
 elif model_weights_option == "pretrained":
-    location = selected_model_dict.get('weightsUrl')
+    location = os.path.join(root_source_path, "results", "model", "model_final_84107b.pkl")
+    # location = selected_model_dict.get('weightsUrl')
 
 m = Detectron2Model(
     location=location, 
