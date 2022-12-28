@@ -38,6 +38,7 @@
                 "TEAM_ID": "277",
                 "WORKSPACE_ID": "403",
                 "DEBUG_WITH_SLY_NET": "1",
+                "APP_NAME": "Serve Detectron2",
                 "SLY_APP_DATA_DIR": "${workspaceFolder}/results",
                 "modal.state.device": "cuda:0",
                 "modal.state.weightsInitialization": "pretrained",

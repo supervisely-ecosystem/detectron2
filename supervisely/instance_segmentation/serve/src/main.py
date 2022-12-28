@@ -140,7 +140,7 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
     def get_info(self):
         info = super().get_info()
         info["model_name"] = selected_model_dict.get("model") 
-        info["checkpoint_name"] = None # TODO:
+        info["checkpoint_name"] = checkpoint_name
         info["pretrained_on_dataset"] = selected_pretrained_dataset if model_weights_option == "pretrained" else "custom"
         info["device"] = device
         info["sliding_window_support"] = self.sliding_window_mode
@@ -192,13 +192,11 @@ if model_weights_option == "custom":
         config_path
     ]
 elif model_weights_option == "pretrained":
-    location = os.path.join(root_source_path, "results", "model", "model_final_84107b.pkl")
-    # location = selected_model_dict.get('weightsUrl')
+    location = selected_model_dict.get('weightsUrl')
 
 m = Detectron2Model(
     location=location, 
     custom_inference_settings=os.path.join(app_source_path, "custom_settings.yaml"),
-    sliding_window_mode = "advanced",
 )
 m.load_on_device(device)
 
@@ -209,8 +207,8 @@ if sly.is_production():
 else:
     # for local development and debugging
     # TODO: add image
-    image_path = "./demo_data/image_01.jpg"
+    image_path = "./demo/image_01.jpg"
     results = m.predict(image_path, settings={})
-    vis_path = "./demo_data/image_01_prediction.jpg"
+    vis_path = "./demo/image_01_prediction.jpg"
     m.visualize(results, image_path, vis_path)
     print(f"predictions and visualization have been saved: {vis_path}")

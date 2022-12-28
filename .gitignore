@@ -8,7 +8,6 @@ supervisely_lib
 *.png
 #*.json
 *.diff
-*.jpg
 !/projects/DensePose/doc/images/*.jpg
 
 # compilation and distribution
