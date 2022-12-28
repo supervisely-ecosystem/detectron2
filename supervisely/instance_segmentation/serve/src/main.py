@@ -76,7 +76,8 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
             cfg = get_cfg()
             cfg.set_new_allowed(True)
             cfg.merge_from_file(config_path)
-        
+        cfg.MODEL.DEVICE = device
+
         if config_path.endswith('.py') or config_path.endswith('.json'):
             model = instantiate(cfg.model)
         else:
@@ -152,11 +153,11 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         confidence_threshold = settings.get("conf_thres", 0.5)
         image = cv2.imread(image_path)  # BGR
         input_data = [{"image": torch.as_tensor(image.transpose(2, 0, 1).astype("float32")).to(device)}]
-        outputs = self.predictor(input_data)  # get predictions from Detectron2 model
-        pred_classes = outputs["instances"].pred_classes.detach().numpy()
+        outputs = self.predictor(input_data)[0]  # get predictions from Detectron2 model
+        pred_classes = outputs["instances"].pred_classes.detach().cpu().numpy()
         pred_class_names = [self.class_names[pred_class] for pred_class in pred_classes]
-        pred_scores = outputs["instances"].scores.detach().numpy().tolist()
-        pred_masks = outputs["instances"].pred_masks.detach().numpy()
+        pred_scores = outputs["instances"].scores.detach().cpu().numpy().tolist()
+        pred_masks = outputs["instances"].pred_masks.detach().cpu().numpy()
 
         results = []
         for score, class_name, mask in zip(pred_scores, pred_class_names, pred_masks):
