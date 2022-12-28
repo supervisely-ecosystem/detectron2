@@ -169,7 +169,7 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
 sly.logger.info("Script arguments", extra={
     "teamId": sly.env.team_id(),
     "workspaceId": sly.env.workspace_id(),
-    "modal.state.modelWeightsOptions": model_weights_option,
+    "modal.state.weightsInitialization": model_weights_option,
     "modal.state.pretrainedDataset": selected_pretrained_dataset,
     "modal.state.selectedModel": selected_model,
     "modal.state.weightsPath": custom_weights
