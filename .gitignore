@@ -54,6 +54,8 @@ _darcs
 
 secret_debug.env
 venv
+*/.venv
+supervisely/instance_segmentation/serve/.venv
 /src/__pycache__
 .idea
 html_kit/_static/*
