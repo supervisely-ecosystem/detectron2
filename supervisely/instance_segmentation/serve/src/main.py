@@ -76,9 +76,8 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
             cfg.set_new_allowed(True)
             cfg.merge_from_file(config_path)
 
-        print(cfg.dump())
-        
-        cfg.MODEL.DEVICE = device
+        if hasattr(cfg, "MODEL"):
+            cfg.MODEL.DEVICE = device # for running on CPU
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
             model = instantiate(cfg.model)
