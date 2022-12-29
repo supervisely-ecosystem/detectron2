@@ -22,6 +22,7 @@ api = sly.Api()
 root_source_path = str(Path(__file__).parents[4])
 app_source_path = str(Path(__file__).parents[1])
 models_configs_dir = os.path.join(root_source_path, "configs")
+sly.logger.info(f"Root path: {root_source_path}")
 
 model_weights_option = os.environ['modal.state.weightsInitialization']
 selected_pretrained_dataset = os.environ['modal.state.pretrainedDataset']
@@ -39,7 +40,6 @@ def update_config_by_custom(cfg, updates):
             cfg[k] = update_config_by_custom(cfg[k], v)
         else:
             cfg[k] = v
-
     return cfg
 
 class Detectron2Model(sly.nn.inference.InstanceSegmentation):
@@ -57,7 +57,8 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         elif model_weights_option == "pretrained":
             weights_path = self.location
             config_path = os.path.join(models_configs_dir, selected_model_dict.get('config'))
-        
+        sly.logger.info(config_path)
+        sly.logger.info(sly.fs.file_exists(config_path))
         # load config
         if config_path.endswith('.py'):
             cfg = LazyConfig.load(config_path)
@@ -72,10 +73,11 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
             base_config_path = os.path.join(models_configs_dir, base_config_path)
             cfg = LazyConfig.load(base_config_path)
             cfg = update_config_by_custom(cfg, config_dict)
-        else:
+        elif config_path.endswith('.json'):
             cfg = get_cfg()
             cfg.set_new_allowed(True)
             cfg.merge_from_file(config_path)
+        
         cfg.MODEL.DEVICE = device
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
