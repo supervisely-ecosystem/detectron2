@@ -8,7 +8,6 @@ supervisely_lib
 *.png
 #*.json
 *.diff
-*.jpg
 !/projects/DensePose/doc/images/*.jpg
 
 # compilation and distribution
@@ -42,7 +41,6 @@ model_ts*.txt
 
 # editor settings
 .idea
-.vscode
 _darcs
 
 # project dirs
@@ -55,9 +53,12 @@ _darcs
 
 secret_debug.env
 venv
+*/.venv
+supervisely/instance_segmentation/serve/.venv
 /src/__pycache__
 .idea
 html_kit/_static/*
 
 authorized_keys
 supervisely_lib
+results
