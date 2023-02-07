@@ -29,8 +29,9 @@ selected_model = os.environ[f'modal.state.selectedModel.{selected_pretrained_dat
 custom_weights = os.environ['modal.state.weightsPath']
 device = os.environ['modal.state.device'] if 'cuda' in os.environ[
     'modal.state.device'] and torch.cuda.is_available() else 'cpu'
-models_by_dataset = pretrained_models.get_pretrained_models()[selected_pretrained_dataset]
-selected_model_dict = next(item for item in models_by_dataset if item["model"] == selected_model)
+models_by_dataset = pretrained_models.get_pretrained_models()
+models_list = models_by_dataset[selected_pretrained_dataset]
+selected_model_dict = next(item for item in models_list if item["model"] == selected_model)
 checkpoint_name = os.path.basename(selected_model_dict.get("config")).split(".")[0]
 
 def update_config_by_custom(cfg, updates):
@@ -68,6 +69,7 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
                 for current_model in models_list_by_dataset:
                     if current_model['model_id'] == config_dict['model_id']:
                         base_config_path = current_model['config']
+                        break
             base_config_path = os.path.join(models_configs_dir, base_config_path)
             cfg = LazyConfig.load(base_config_path)
             cfg = update_config_by_custom(cfg, config_dict)
