@@ -435,6 +435,7 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
 @g.my_app.ignore_errors_and_show_dialog_window()
 def train(api: sly.Api, task_id, context, state, app_logger):
     try:
+        sly.logger.debug(f"{g.need_convert_to_sly=}")
         if g.need_convert_to_sly:
             # convert project to segmentation masks
             project_dir_seg = convert_supervisely_to_segmentation(state)

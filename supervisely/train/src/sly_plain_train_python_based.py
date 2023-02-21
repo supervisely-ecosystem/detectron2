@@ -61,6 +61,7 @@ from detectron2.solver import build_lr_scheduler, build_optimizer
 from detectron2.utils.events import EventStorage, EventWriter, get_event_storage
 from detectron2.data import DatasetMapper
 from detectron2.data import DatasetCatalog, MetadataCatalog
+from detectron2.data.transforms import ResizeShortestEdge
 
 import supervisely as sly
 import sly_globals as g
@@ -228,6 +229,8 @@ def do_test(cfg, model, current_iter):
 
     dataset_name = cfg.dataloader.test.dataset.names
     output_folder = os.path.join(cfg.train.output_dir, "inference", dataset_name)
+    print(f"{output_folder=}")
+
     # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
     #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
 
@@ -310,11 +313,22 @@ def visualize_results(cfg, model):
 
     d = test_ds[0]
     # d = mapper(d)  # debug_augmentation
+    
+    try:
+        resize_transform: ResizeShortestEdge = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
+    except Exception as exc:
+        sly.logger.warn(f"can't read input_size and/or input_format from config: {exc}."
+                        "Defaulting to min: 800, max: 1333, format: BGR.")
+        resize_transform = ResizeShortestEdge([800, 800], 1333)
 
     im = cv2.imread(d["file_name"])
-    d["image"] = torch.as_tensor(im.transpose(2, 0, 1).astype("float32"))
 
-    outputs = model([d])
+    height, width = im.shape[:2]
+    input = resize_transform.get_transform(im).apply_image(im)
+    input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
+    input = {"image": input, "height": height, "width": width}
+
+    outputs = model([input])
 
     gt_vis = get_visualizer(im, test_metadata)
     out_t = gt_vis.draw_dataset_dict(d)
@@ -326,6 +340,7 @@ def visualize_results(cfg, model):
 
     output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
+    print(output_image_truth.shape, output_image_pred.shape)
 
     sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
     model.train()
@@ -466,7 +481,11 @@ def do_train(cfg, resume=False):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     try:
                         results = do_test(cfg, model, iteration)
+                        print('list_gpu_processes', torch.cuda.list_gpu_processes())
+                        print('memory_allocated, MB', torch.cuda.memory_allocated()/1024/1024)
                         torch.cuda.empty_cache()
+                        print('list_gpu_processes', torch.cuda.list_gpu_processes())
+                        print('memory_allocated, MB', torch.cuda.memory_allocated()/1024/1024)
                         visualize_results(cfg, model)
 
                         if cfg.train.save_best_model:
