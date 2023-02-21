@@ -235,18 +235,20 @@ def do_test(cfg, model, current_iter):
     data_loader = instantiate(cfg.dataloader.test)
     evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
-    print(f"{len(data_loader)=}")
-    for idx, inputs in enumerate(data_loader):
-        try:
-            print(idx, inputs[0]['image'].shape)
-        except:
-            print(idx, inputs)
-        outputs = model(inputs)
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        evaluator.process(inputs, outputs)
-
-    results = evaluator.evaluate()
+    ### DEBUG
+    if False:
+        print(f"{len(data_loader)=}")
+        for idx, inputs in enumerate(data_loader):
+            try:
+                print(idx, inputs[0]['image'].shape)
+            except:
+                print(idx, inputs)
+            outputs = model(inputs)
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+            evaluator.process(inputs, outputs)
+        results = evaluator.evaluate()
+    ### DEBUG
 
     # evaluator = get_evaluator(
     #     cfg, dataset_name,
