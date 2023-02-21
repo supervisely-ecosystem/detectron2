@@ -383,6 +383,7 @@ def do_train(cfg, resume=False):
         # compared to "train_net.py", we do not support accurate timing and
         # precise BN here, because they are not trivial to implement in a small training loop
 
+        sly.logger.debug(f"g.augs_config_path: {g.augs_config_path}\ng.resize_dimensions: {g.resize_dimensions}")
         if g.augs_config_path is not None or g.resize_dimensions is not None:
             data_loader = build_detection_train_loader(cfg,  # AUGMENTATIONS HERE
                                                        mapper=mapper)

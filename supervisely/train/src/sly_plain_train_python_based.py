@@ -381,6 +381,7 @@ def do_train(cfg, resume=False):
         'iter': 0
     }
 
+    sly.logger.debug("strating training while loop...")
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
@@ -402,12 +403,14 @@ def do_train(cfg, resume=False):
 
         cfg.dataloader.train.mapper = mapper
 
+        sly.logger.debug(f"g.augs_config_path: {g.augs_config_path}\ng.resize_dimensions: {g.resize_dimensions}")
         if g.augs_config_path is not None or g.resize_dimensions is not None:
             cfg.dataloader.test.mapper = functools.partial(mapper, augment=True)
 
         data_loader = instantiate(cfg.dataloader.train)
 
         logger.info("training from iteration {}".format(start_iter))
+        sly.logger.debug("strating training for loop...")
         with EventStorage(start_iter) as storage:
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
 
@@ -417,7 +420,9 @@ def do_train(cfg, resume=False):
                 start_iter = iteration
                 storage.iter = iteration
 
+                sly.logger.debug(f"{iteration}. forward...")
                 loss_dict = model(data)
+                sly.logger.debug(f"{iteration}. forward done!")
                 losses = sum(loss_dict.values())
                 assert torch.isfinite(losses).all(), loss_dict
 
@@ -426,9 +431,11 @@ def do_train(cfg, resume=False):
                 if comm.is_main_process():
                     storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
 
+                sly.logger.debug(f"{iteration}. backward+step...")
                 optimizer.zero_grad()
                 losses.backward()
                 optimizer.step()
+                sly.logger.debug(f"{iteration}. backward+step done!")
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
 
                 try:
@@ -441,11 +448,13 @@ def do_train(cfg, resume=False):
                         and iteration % cfg.train.eval_period == 0
                         and iteration != max_iter - 1
                 ):
+                    sly.logger.debug(f"{iteration}. starting eval...")
                     try:
                         results = do_test(cfg, model, iteration)
                         torch.cuda.empty_cache()
 
                         if cfg.train.save_best_model:
+                            sly.logger.debug(f"{iteration}. save_best_model...")
                             f.save_best_model(checkpointer, best_model_info, results, iteration)
                     except Exception as ex:
                         logger.warning(f"{ex} while testing")
@@ -457,18 +466,21 @@ def do_train(cfg, resume=False):
                         and (iteration + 1) % cfg.test.vis_period == 0
                         and iteration != max_iter - 1
                 ):
+                    sly.logger.debug(f"{iteration}. starting eval (viz)...")
                     try:
                         results = do_test(cfg, model, iteration)
                         torch.cuda.empty_cache()
                         visualize_results(cfg, model)
 
                         if cfg.train.save_best_model:
+                            sly.logger.debug(f"{iteration}. save_best_model...")
                             f.save_best_model(checkpointer, best_model_info, results, iteration)
                     except Exception as ex:
                         logger.warning(f"{ex} while testing")
                     comm.synchronize()
 
                 if iteration % 10 == 0 or iteration == max_iter - 1:
+                    sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
                         writer.write()
                 periodic_checkpointer.step(iteration)

@@ -252,8 +252,10 @@ def configure_datasets(state, project_seg_dir_path):
     get_validation = functools.partial(convert_data_to_detectron, project_seg_dir_path=project_seg_dir_path,
                                        set_path=step02_splits.val_set_path)
 
-    DatasetCatalog.register("main_train", get_train)
-    DatasetCatalog.register("main_validation", get_validation)
+    if g.need_register_datasets:
+        DatasetCatalog.register("main_train", get_train)
+        DatasetCatalog.register("main_validation", get_validation)
+        g.need_register_datasets = False
 
     MetadataCatalog.get("main_train").thing_classes = list(g.all_classes.keys())
     MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
@@ -433,14 +435,15 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
 @g.my_app.ignore_errors_and_show_dialog_window()
 def train(api: sly.Api, task_id, context, state, app_logger):
     try:
-        # convert project to segmentation masks
-        project_dir_seg = convert_supervisely_to_segmentation(state)
-        project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
-        g.seg_project_meta = project_seg.meta
-        classes_json = project_seg.meta.obj_classes.to_json()
-        classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
-
-        sly.json.dump_json_file(classes_json, model_classes_path)
+        if g.need_convert_to_sly:
+            # convert project to segmentation masks
+            project_dir_seg = convert_supervisely_to_segmentation(state)
+            project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
+            g.seg_project_meta = project_seg.meta
+            classes_json = project_seg.meta.obj_classes.to_json()
+            classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
+            sly.json.dump_json_file(classes_json, model_classes_path)
+            g.need_convert_to_sly = False
 
         # TRAIN HERE
         # --------

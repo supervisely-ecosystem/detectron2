@@ -81,4 +81,5 @@ iterations_to_add = 0
 
 seg_project_meta = None
 
-
+need_convert_to_sly = True
+need_register_datasets = True
