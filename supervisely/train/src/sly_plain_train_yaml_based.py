@@ -430,19 +430,8 @@ def do_train(cfg, resume=False):
                 ):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     results = do_test(cfg, model, iteration)
-                    if cfg.SAVE_BEST_MODEL:
-                        sly.logger.debug(f"{iteration}. save_best_model...")
-                        f.save_best_model(checkpointer, best_model_info, results, iteration)
-                    comm.synchronize()
-
-                if (
-                        cfg.TEST.VIS_PERIOD > 0
-                        and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
-                        and iteration != max_iter - 1
-                ):
-                    sly.logger.debug(f"{iteration}. starting eval (viz)...")
-                    results = do_test(cfg, model, iteration)
                     visualize_results(cfg, model)
+
                     if cfg.SAVE_BEST_MODEL:
                         sly.logger.debug(f"{iteration}. save_best_model...")
                         f.save_best_model(checkpointer, best_model_info, results, iteration)
@@ -452,6 +441,7 @@ def do_train(cfg, resume=False):
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
                         writer.write()
+                
                 periodic_checkpointer.step(iteration)
 
         g.training_controllers['pause'] = True

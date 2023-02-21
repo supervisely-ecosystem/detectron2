@@ -444,6 +444,8 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
             sly.json.dump_json_file(classes_json, model_classes_path)
             g.need_convert_to_sly = False
+        else:
+            project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
 
         # TRAIN HERE
         # --------

@@ -231,10 +231,23 @@ def do_test(cfg, model, current_iter):
     # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
     #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
 
+    print(f"{cfg.dataloader.test=}")
     data_loader = instantiate(cfg.dataloader.test)
     evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
-    #
+    print(f"{len(data_loader)=}")
+    for idx, inputs in enumerate(data_loader):
+        try:
+            print(idx, inputs[0]['image'].shape)
+        except:
+            print(idx, inputs)
+        outputs = model(inputs)
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        evaluator.process(inputs, outputs)
+
+    results = evaluator.evaluate()
+
     # evaluator = get_evaluator(
     #     cfg, dataset_name,
     # )
@@ -452,24 +465,6 @@ def do_train(cfg, resume=False):
                     try:
                         results = do_test(cfg, model, iteration)
                         torch.cuda.empty_cache()
-
-                        if cfg.train.save_best_model:
-                            sly.logger.debug(f"{iteration}. save_best_model...")
-                            f.save_best_model(checkpointer, best_model_info, results, iteration)
-                    except Exception as ex:
-                        logger.warning(f"{ex} while testing")
-                    # Compared to "train_net.py", the test results are not dumped to EventStorage
-                    comm.synchronize()
-
-                if (
-                        cfg.test.vis_period > 0
-                        and (iteration + 1) % cfg.test.vis_period == 0
-                        and iteration != max_iter - 1
-                ):
-                    sly.logger.debug(f"{iteration}. starting eval (viz)...")
-                    try:
-                        results = do_test(cfg, model, iteration)
-                        torch.cuda.empty_cache()
                         visualize_results(cfg, model)
 
                         if cfg.train.save_best_model:
@@ -477,12 +472,15 @@ def do_train(cfg, resume=False):
                             f.save_best_model(checkpointer, best_model_info, results, iteration)
                     except Exception as ex:
                         logger.warning(f"{ex} while testing")
+                        raise ex
+                    # Compared to "train_net.py", the test results are not dumped to EventStorage
                     comm.synchronize()
 
                 if iteration % 10 == 0 or iteration == max_iter - 1:
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
                         writer.write()
+                
                 periodic_checkpointer.step(iteration)
 
         # g.sly_progresses['iter'].set(max_iter)
