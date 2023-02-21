@@ -6,23 +6,26 @@ import cv2
 import json
 from dotenv import load_dotenv
 import torch
+import numpy as np
 import supervisely as sly
 import pretrained_models
 
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg, LazyConfig, instantiate
 from detectron2.data import MetadataCatalog, DatasetCatalog
-
+from detectron2.data.transforms import ResizeShortestEdge
 from detectron2.modeling import build_model 
 
-load_dotenv("local.env")
+
+root_source_path = str(Path(__file__).parents[4])
+app_source_path = str(Path(__file__).parents[1])
+
+load_dotenv(os.path.join(app_source_path, "local.env"))
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 
 api = sly.Api()
-root_source_path = str(Path(__file__).parents[4])
-app_source_path = str(Path(__file__).parents[1])
-models_configs_dir = os.path.join(root_source_path, "configs")
 
+models_configs_dir = os.path.join(root_source_path, "configs")
 model_weights_option = os.environ['modal.state.weightsInitialization']
 selected_pretrained_dataset = os.environ['modal.state.pretrainedDataset']
 selected_model = os.environ[f'modal.state.selectedModel.{selected_pretrained_dataset}']
@@ -83,13 +86,26 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
             model = instantiate(cfg.model)
+            try:
+                self.resize_transform = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
+                self.input_format = instantiate(cfg.dataloader['test']['mapper']['image_format'])
+            except Exception as exc:
+                sly.logger.warn(f"can't read input_size and/or input_format from config: {exc}."
+                "Defaulting to min: 800, max: 1333, format: BGR.")
+                self.resize_transform = ResizeShortestEdge([800, 800], 1333)
+                self.input_format = "BGR"
+
         else:
             model = build_model(cfg)
+            self.resize_transform = ResizeShortestEdge(
+                [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+            )
+            self.input_format = cfg.INPUT.FORMAT
 
         model.eval()
         DetectionCheckpointer(model).load(weights_path)
         model.to(device)
-        self.predictor = model
+        self.model = model
 
         DatasetCatalog.register("eval", lambda: None)
         if model_weights_option == "custom":
@@ -155,8 +171,8 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
     ) -> List[sly.nn.PredictionMask]:
         confidence_threshold = settings.get("conf_thres", 0.5)
         image = cv2.imread(image_path)  # BGR
-        input_data = [{"image": torch.as_tensor(image.transpose(2, 0, 1).astype("float32")).to(device)}]
-        outputs = self.predictor(input_data)[0]  # get predictions from Detectron2 model
+        input = self.preprocess_image(image)
+        outputs = self.model([input])[0]  # get predictions from Detectron2 model
         pred_classes = outputs["instances"].pred_classes.detach().cpu().numpy()
         pred_class_names = [self.class_names[pred_class] for pred_class in pred_classes]
         pred_scores = outputs["instances"].scores.detach().cpu().numpy().tolist()
@@ -168,6 +184,16 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
             if score >= confidence_threshold and mask.any():
                 results.append(sly.nn.PredictionMask(class_name, mask, score))
         return results
+
+    def preprocess_image(self, image: np.ndarray):
+        # image of shape (H, W, C) in BGR order.
+        if self.input_format == "RGB":
+            image = image[:, :, ::-1]
+        height, width = image.shape[:2]
+        image = self.resize_transform.get_transform(image).apply_image(image)
+        image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
+        input = {"image": image, "height": height, "width": width}
+        return input
 
 sly.logger.info("Script arguments", extra={
     "teamId": sly.env.team_id(),
