@@ -423,7 +423,7 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
     if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
         # fields_to_update['state.followLastPrediction'] = False
 
-        index = int(state['currEpochPreview'] / state["visStep"]) - 1
+        index = int(state['currEpochPreview'] / state["evalInterval"]) - 1
 
         gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
         sly_train_results_visualizer.update_preview_by_index(index, gallery_preview)

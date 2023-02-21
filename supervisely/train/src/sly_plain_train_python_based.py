@@ -61,7 +61,7 @@ from detectron2.solver import build_lr_scheduler, build_optimizer
 from detectron2.utils.events import EventStorage, EventWriter, get_event_storage
 from detectron2.data import DatasetMapper
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.data.transforms import ResizeShortestEdge
+from detectron2.data.transforms import ResizeShortestEdge, Resize
 
 import supervisely as sly
 import sly_globals as g
@@ -315,7 +315,12 @@ def visualize_results(cfg, model):
     # d = mapper(d)  # debug_augmentation
     
     try:
-        resize_transform: ResizeShortestEdge = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
+        if g.resize_dimensions:
+            resize_transform: ResizeShortestEdge = instantiate(g.test_mapper['augmentations'][0])  # TODO: remove (for debug)
+            h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
+            resize_transform = Resize([h, w])
+        else:
+            resize_transform: ResizeShortestEdge = instantiate(g.test_mapper['augmentations'][0])
     except Exception as exc:
         sly.logger.warn(f"can't read input_size and/or input_format from config: {exc}."
                         "Defaulting to min: 800, max: 1333, format: BGR.")
@@ -434,6 +439,7 @@ def do_train(cfg, resume=False):
         cfg.dataloader.train.mapper = mapper
 
         sly.logger.debug(f"g.augs_config_path: {g.augs_config_path}\ng.resize_dimensions: {g.resize_dimensions}")
+        g.test_mapper = cfg.dataloader.test.mapper
         if g.augs_config_path is not None or g.resize_dimensions is not None:
             cfg.dataloader.test.mapper = functools.partial(mapper, augment=True)
 
