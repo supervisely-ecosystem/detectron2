@@ -464,10 +464,14 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             os.makedirs(output_dir, exist_ok=True)
 
         save_config_locally(cfg, config_path)
+        sly.logger.debug(config_path)
+        sly.logger.debug(cfg)
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
+            sly.logger.debug("training with .py config")
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
+            sly.logger.debug("training with .yaml config")
             sly_plain_train_yaml_based.do_train(cfg=cfg)
 
         # # --------

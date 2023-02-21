@@ -361,6 +361,7 @@ def do_train(cfg, resume=False):
         'iter': 0
     }
 
+    sly.logger.debug("strating training while loop...")
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
@@ -388,7 +389,9 @@ def do_train(cfg, resume=False):
         else:
             data_loader = build_detection_train_loader(cfg)
 
+        sly.logger.debug("Train loader has created!")
         logger.info("training from iteration {}".format(start_iter))
+        sly.logger.debug("strating training for loop...")
         with EventStorage(start_iter) as storage:
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
                 if f.control_training_cycle() == 'stop':
@@ -397,7 +400,9 @@ def do_train(cfg, resume=False):
                 start_iter = iteration
                 storage.iter = iteration
 
+                sly.logger.debug(f"{iteration}. forward...")
                 loss_dict = model(data)
+                sly.logger.debug(f"{iteration}. forward done!")
                 losses = sum(loss_dict.values())
                 assert torch.isfinite(losses).all(), loss_dict
 
@@ -406,9 +411,11 @@ def do_train(cfg, resume=False):
                 if comm.is_main_process():
                     storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
 
+                sly.logger.debug(f"{iteration}. backward+step...")
                 optimizer.zero_grad()
                 losses.backward()
                 optimizer.step()
+                sly.logger.debug(f"{iteration}. backward+step done!")
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
                 try:
                     scheduler.step()
@@ -420,8 +427,10 @@ def do_train(cfg, resume=False):
                         and iteration % cfg.TEST.EVAL_PERIOD == 0
                         and iteration != max_iter - 1
                 ):
+                    sly.logger.debug(f"{iteration}. starting eval...")
                     results = do_test(cfg, model, iteration)
                     if cfg.SAVE_BEST_MODEL:
+                        sly.logger.debug(f"{iteration}. save_best_model...")
                         f.save_best_model(checkpointer, best_model_info, results, iteration)
                     comm.synchronize()
 
@@ -430,13 +439,16 @@ def do_train(cfg, resume=False):
                         and (iteration + 1) % cfg.TEST.VIS_PERIOD == 0
                         and iteration != max_iter - 1
                 ):
+                    sly.logger.debug(f"{iteration}. starting eval (viz)...")
                     results = do_test(cfg, model, iteration)
                     visualize_results(cfg, model)
                     if cfg.SAVE_BEST_MODEL:
+                        sly.logger.debug(f"{iteration}. save_best_model...")
                         f.save_best_model(checkpointer, best_model_info, results, iteration)
                     comm.synchronize()
 
                 if iteration % 10 == 0 or iteration == max_iter - 1:
+                    sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
                         writer.write()
                 periodic_checkpointer.step(iteration)
