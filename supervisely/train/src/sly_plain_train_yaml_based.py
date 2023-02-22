@@ -429,7 +429,6 @@ def do_train(cfg, resume=False):
                 if (
                         cfg.TEST.EVAL_PERIOD > 0
                         and iteration % cfg.TEST.EVAL_PERIOD == 0
-                        and iteration != max_iter - 1
                 ):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     results = do_test(cfg, model, iteration)

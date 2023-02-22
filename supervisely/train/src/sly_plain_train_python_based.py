@@ -468,16 +468,13 @@ def do_train(cfg, resume=False):
                 if (
                         cfg.train.eval_period > 0
                         and iteration % cfg.train.eval_period == 0
-                        and iteration != max_iter - 1
                 ):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     try:
                         results = do_test(cfg, model, iteration)
                         print('list_gpu_processes', torch.cuda.list_gpu_processes())
-                        print('memory_allocated, MB', torch.cuda.memory_allocated()/1024/1024)
                         torch.cuda.empty_cache()
                         print('list_gpu_processes', torch.cuda.list_gpu_processes())
-                        print('memory_allocated, MB', torch.cuda.memory_allocated()/1024/1024)
                         visualize_results(cfg, model)
 
                         if cfg.train.save_best_model:
