@@ -308,7 +308,7 @@ def visualize_results(cfg, model):
     output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
 
-    # sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
+    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
 
 
 def mapper(dataset_dict):
