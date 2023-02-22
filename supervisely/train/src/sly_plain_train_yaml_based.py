@@ -418,6 +418,9 @@ def do_train(cfg, resume=False):
                 optimizer.step()
                 sly.logger.debug(f"{iteration}. backward+step done!")
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
+                
+                g.sly_progresses['iter'].set(iteration, force_update=True)
+                
                 try:
                     scheduler.step()
                 except:
@@ -437,7 +440,6 @@ def do_train(cfg, resume=False):
                         f.save_best_model(checkpointer, best_model_info, results, iteration)
                     comm.synchronize()
 
-                g.sly_progresses['iter'].set(iteration, force_update=True)
                 if iteration % 10 == 0 or iteration == max_iter - 1:
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:

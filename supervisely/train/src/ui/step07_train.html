@@ -144,7 +144,7 @@
                 <div class="block">
                     <!--                    <div><b>VISUALIZATION EPOCH {{state.currEpochPreview}}</b></div>-->
                     <el-checkbox v-model="state.followLastPrediction"
-                                 @input="{state.followLastPrediction ? [state.currEpochPreview=data.previewPredLinks.length * state.evalInterval] : []}">
+                                 @input="{state.followLastPrediction ? [state.currEpochPreview=(data.previewPredLinks.length - 1) * state.evalInterval] : []}">
                         Follow Last Prediction
                         <b style="color: dimgray">[iteration {{data.previewPredLinks.length * state.evalInterval}}]</b>
                     </el-checkbox>
@@ -154,7 +154,7 @@
                             style="padding-right: 10px;"
                             show-stops
                             :min="0"
-                            :max="data.previewPredLinks.length * state.evalInterval"
+                            :max="(data.previewPredLinks.length - 1) * state.evalInterval"
                             :step="state.evalInterval"
                             :disabled="data.previewPredLinks.length < 2"
                             @change="command('previewByEpoch')">

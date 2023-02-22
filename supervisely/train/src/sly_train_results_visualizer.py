@@ -66,7 +66,7 @@ def append_gallery(gt_image, pred_image):
 
     fields = [
         {"field": "state.currEpochPreview",
-         "payload": len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) *
+         "payload": (len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) - 1) *
                     g.api.app.get_field(g.task_id, 'state.evalInterval')},
     ]
 
@@ -76,6 +76,7 @@ def append_gallery(gt_image, pred_image):
 
 
 def update_metrics_table_by_by_index(index):
+    print("update_metrics_table_by_by_index(), index =", index)
     current_results = g.metrics_for_each_epoch[index]
 
     table_to_upload = []

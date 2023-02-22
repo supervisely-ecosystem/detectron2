@@ -423,7 +423,7 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
     if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
         # fields_to_update['state.followLastPrediction'] = False
 
-        index = int(state['currEpochPreview'] / state["evalInterval"]) - 1
+        index = int(state['currEpochPreview'] / state["evalInterval"])
 
         print(f'{state["evalInterval"]=}, {index=}, {state["currEpochPreview"]=}, {state["followLastPrediction"]=}')
         print(g.api.app.get_field(g.task_id, 'data.previewPredLinks'))
@@ -478,6 +478,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
             sly.logger.debug("training with .py config")
+            g.test_mapper = cfg.dataloader.test.mapper
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
             sly.logger.debug("training with .yaml config")
