@@ -67,7 +67,7 @@ def append_gallery(gt_image, pred_image):
     fields = [
         {"field": "state.currEpochPreview",
          "payload": len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) *
-                    g.api.app.get_field(g.task_id, 'state.visStep')},
+                    g.api.app.get_field(g.task_id, 'state.evalInterval')},
     ]
 
     follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
