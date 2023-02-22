@@ -405,7 +405,7 @@ def do_train(cfg, resume=False):
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
-                # start_iter += 1
+                start_iter += 1
                 max_iter += cfg.train.max_iter
                 g.sly_progresses['iter'].set_total(max_iter - 1)
         else:
