@@ -283,6 +283,7 @@ def get_visualizer(im, dataset_meta):
 
 
 def visualize_results(cfg, model):
+    print("Enter in visualize_results...")
     model.eval()
     checkpointer = DetectionCheckpointer(model, save_dir=cfg.train.output_dir)
     checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
@@ -301,7 +302,6 @@ def visualize_results(cfg, model):
     
     try:
         if g.resize_dimensions:
-            resize_transform: ResizeShortestEdge = instantiate(g.test_mapper['augmentations'][0])  # TODO: remove (for debug)
             h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
             resize_transform = Resize([h, w])
         else:
@@ -318,7 +318,10 @@ def visualize_results(cfg, model):
     input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
     input = {"image": input, "height": height, "width": width}
 
-    outputs = model([input])
+    print("model forward...")
+    with torch.no_grad():
+        outputs = model([input])
+    print("model forward done!")
 
     gt_vis = get_visualizer(im, test_metadata)
     out_t = gt_vis.draw_dataset_dict(d)
