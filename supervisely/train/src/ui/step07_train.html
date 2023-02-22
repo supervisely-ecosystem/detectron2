@@ -146,7 +146,7 @@
                     <el-checkbox v-model="state.followLastPrediction"
                                  @input="{state.followLastPrediction ? [state.currEpochPreview=(data.previewPredLinks.length - 1) * state.evalInterval] : []}">
                         Follow Last Prediction
-                        <b style="color: dimgray">[iteration {{data.previewPredLinks.length * state.evalInterval}}]</b>
+                        <b style="color: dimgray">[iteration {{(data.previewPredLinks.length - 1) * state.evalInterval}}]</b>
                     </el-checkbox>
                     <el-slider
                             v-model="state.currEpochPreview"

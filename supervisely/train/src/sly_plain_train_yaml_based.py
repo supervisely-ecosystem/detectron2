@@ -265,7 +265,7 @@ def do_test(cfg, model, current_iter):
             if segm_res.get(key, None) is not None:
                 segm_res.pop(key)
 
-        g.metrics_for_each_epoch[current_iter + 1] = segm_res
+        g.metrics_for_each_epoch[current_iter] = segm_res
         g.metrics_for_each_epoch[-1] = segm_res
 
     return results
@@ -308,7 +308,7 @@ def visualize_results(cfg, model):
     output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
 
-    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
+    # sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
 
 
 def mapper(dataset_dict):

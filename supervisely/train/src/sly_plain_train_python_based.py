@@ -266,7 +266,7 @@ def do_test(cfg, model, current_iter):
             if segm_res.get(key, None) is not None:
                 segm_res.pop(key)
 
-        g.metrics_for_each_epoch[current_iter + 1] = segm_res
+        g.metrics_for_each_epoch[current_iter] = segm_res
         g.metrics_for_each_epoch[-1] = segm_res
 
         print(g.metrics_for_each_epoch)
@@ -332,7 +332,7 @@ def visualize_results(cfg, model):
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
     print(output_image_truth.shape, output_image_pred.shape)
 
-    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
+    # sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
     model.train()
 
 
@@ -459,7 +459,7 @@ def do_train(cfg, resume=False):
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
 
                 g.sly_progresses['iter'].set(iteration, force_update=True)
-                
+
                 try:
                     scheduler.step()
                 except:
