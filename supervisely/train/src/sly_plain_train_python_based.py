@@ -503,14 +503,13 @@ def do_train(cfg, resume=False):
                     # Compared to "train_net.py", the test results are not dumped to EventStorage
                     comm.synchronize()
 
+                g.sly_progresses['iter'].set(iteration, force_update=True)
                 if iteration % 10 == 0 or iteration == max_iter - 1:
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
                         writer.write()
                 
                 periodic_checkpointer.step(iteration)
-
-        # g.sly_progresses['iter'].set(max_iter)
 
         g.training_controllers['pause'] = True
         g.api.task.set_field(g.task_id, 'state.trainOnPause', True)

@@ -144,7 +144,7 @@
                 <div class="block">
                     <!--                    <div><b>VISUALIZATION EPOCH {{state.currEpochPreview}}</b></div>-->
                     <el-checkbox v-model="state.followLastPrediction"
-                                 @input="{state.followLastPrediction ? [state.currEpochPreview=data.previewPredLinks.length * state.visStep] : []}">
+                                 @input="{state.followLastPrediction ? [state.currEpochPreview=data.previewPredLinks.length * state.evalInterval] : []}">
                         Follow Last Prediction
                         <b style="color: dimgray">[iteration {{data.previewPredLinks.length * state.evalInterval}}]</b>
                     </el-checkbox>
@@ -153,9 +153,9 @@
 
                             style="padding-right: 10px;"
                             show-stops
-                            :min="state.visStep"
-                            :max="data.previewPredLinks.length * state.visStep"
-                            :step="state.visStep"
+                            :min="state.evalInterval"
+                            :max="data.previewPredLinks.length * state.evalInterval"
+                            :step="state.evalInterval"
                             :disabled="data.previewPredLinks.length < 2"
                             @change="command('previewByEpoch')">
 
@@ -186,7 +186,7 @@
         </sly-field>
         <div v-else
              v-loading="true"
-             :element-loading-text="`Demo predictions will be available after validation...`"
+             :element-loading-text="`Visualization will be available after validation...`"
              style="height: 150px">
         </div>
     </div>

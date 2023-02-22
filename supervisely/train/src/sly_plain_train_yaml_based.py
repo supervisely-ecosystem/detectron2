@@ -437,6 +437,7 @@ def do_train(cfg, resume=False):
                         f.save_best_model(checkpointer, best_model_info, results, iteration)
                     comm.synchronize()
 
+                g.sly_progresses['iter'].set(iteration, force_update=True)
                 if iteration % 10 == 0 or iteration == max_iter - 1:
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
