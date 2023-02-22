@@ -326,10 +326,12 @@ def visualize_results(cfg, model):
     gt_vis = get_visualizer(im, test_metadata)
     out_t = gt_vis.draw_dataset_dict(d)
     output_image_truth = out_t.get_image()[:, :, ::-1]
+    print("GT drawn")
 
     pred_vis = get_visualizer(im, test_metadata)
     out_p = pred_vis.draw_instance_predictions(outputs[0]["instances"].to("cpu"))
     output_image_pred = out_p.get_image()[:, :, ::-1]
+    print("Pred drawn")
 
     output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
