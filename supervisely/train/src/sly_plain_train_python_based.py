@@ -316,7 +316,7 @@ def visualize_results(cfg, model):
     height, width = im.shape[:2]
     input = resize_transform.get_transform(im).apply_image(im)
     input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
-    input = {"image": input, "height": height, "width": width}
+    input = {"image": input}  #, "height": height, "width": width}
 
     print("model forward...")
     with torch.no_grad():
@@ -477,9 +477,7 @@ def do_train(cfg, resume=False):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     try:
                         results = do_test(cfg, model, iteration)
-                        print('list_gpu_processes', torch.cuda.list_gpu_processes())
                         torch.cuda.empty_cache()
-                        print('list_gpu_processes', torch.cuda.list_gpu_processes())
                         visualize_results(cfg, model)
 
                         if cfg.train.save_best_model:
