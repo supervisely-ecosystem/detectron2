@@ -271,46 +271,6 @@ def do_test(cfg, model, current_iter):
     return results
 
 
-def get_visualizer(im, dataset_meta):
-    return Visualizer(im[:, :, ::-1],
-                      metadata=dataset_meta,
-                      scale=1
-                      # remove the colors of unsegmented pixels. This option is only available for segmentation models
-                      )
-
-
-def visualize_results(cfg, model):
-    checkpointer = DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR)
-    checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
-
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "last_saved_model.pth")  # path to the model we just trained
-
-    test_ds_name = cfg.DATASETS.TEST[0]
-    test_ds = DatasetCatalog.get(test_ds_name)
-
-    predictor = DefaultPredictor(cfg)
-    test_metadata = MetadataCatalog.get("main_validation")
-
-    d = test_ds[0]
-    # d = mapper(d)  # debug_augmentation
-
-    im = cv2.imread(d["file_name"])
-    outputs = predictor(im)
-
-    gt_vis = get_visualizer(im, test_metadata)
-    out_t = gt_vis.draw_dataset_dict(d)
-    output_image_truth = out_t.get_image()[:, :, ::-1]
-
-    pred_vis = get_visualizer(im, test_metadata)
-    out_p = pred_vis.draw_instance_predictions(outputs["instances"].to("cpu"))
-    output_image_pred = out_p.get_image()[:, :, ::-1]
-
-    output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
-    output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
-
-    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
-
-
 def mapper(dataset_dict):
     # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
@@ -432,7 +392,8 @@ def do_train(cfg, resume=False):
                 ):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     results = do_test(cfg, model, iteration)
-                    visualize_results(cfg, model)
+                    test_ds_name = cfg.DATASETS.TEST[0]
+                    sly_train_results_visualizer.visualize_results(test_ds_name, model)
 
                     if cfg.SAVE_BEST_MODEL:
                         sly.logger.debug(f"{iteration}. save_best_model...")

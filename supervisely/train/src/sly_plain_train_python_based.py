@@ -61,7 +61,6 @@ from detectron2.solver import build_lr_scheduler, build_optimizer
 from detectron2.utils.events import EventStorage, EventWriter, get_event_storage
 from detectron2.data import DatasetMapper
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.data.transforms import ResizeShortestEdge, Resize
 
 import supervisely as sly
 import sly_globals as g
@@ -274,73 +273,6 @@ def do_test(cfg, model, current_iter):
     return results
 
 
-def get_visualizer(im, dataset_meta):
-    return Visualizer(im[:, :, ::-1],
-                      metadata=dataset_meta,
-                      scale=1
-                      # remove the colors of unsegmented pixels. This option is only available for segmentation models
-                      )
-
-
-def visualize_results(cfg, model):
-    print("Enter in visualize_results...")
-    model.eval()
-    checkpointer = DetectionCheckpointer(model, save_dir=cfg.train.output_dir)
-    checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
-
-    cfg.train.init_checkpoint = os.path.join(cfg.train.output_dir, "last_saved_model.pth")  # path to the model we just trained
-
-    DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
-
-    test_ds_name = cfg.dataloader.test.dataset.names
-    test_ds = DatasetCatalog.get(test_ds_name)
-
-    test_metadata = MetadataCatalog.get("main_validation")
-
-    d = test_ds[0]
-    # d = mapper(d)  # debug_augmentation
-    
-    try:
-        if g.resize_dimensions:
-            h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
-            resize_transform = Resize([h, w])
-        else:
-            resize_transform: ResizeShortestEdge = instantiate(g.test_mapper['augmentations'][0])
-    except Exception as exc:
-        sly.logger.warn(f"can't read input_size and/or input_format from config: {exc}."
-                        "Defaulting to min: 800, max: 1333, format: BGR.")
-        resize_transform = ResizeShortestEdge([800, 800], 1333)
-
-    im = cv2.imread(d["file_name"])
-
-    height, width = im.shape[:2]
-    input = resize_transform.get_transform(im).apply_image(im)
-    input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
-    input = {"image": input}  #, "height": height, "width": width}
-
-    print("model forward...")
-    with torch.no_grad():
-        outputs = model([input])
-    print("model forward done!")
-
-    gt_vis = get_visualizer(im, test_metadata)
-    out_t = gt_vis.draw_dataset_dict(d)
-    output_image_truth = out_t.get_image()[:, :, ::-1]
-    print("GT drawn")
-
-    pred_vis = get_visualizer(im, test_metadata)
-    out_p = pred_vis.draw_instance_predictions(outputs[0]["instances"].to("cpu"))
-    output_image_pred = out_p.get_image()[:, :, ::-1]
-    print("Pred drawn")
-
-    output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
-    output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
-    print(output_image_truth.shape, output_image_pred.shape)
-
-    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
-    model.train()
-
-
 def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
     res = augs(images=[img], bounding_boxes=boxes, segmentation_maps=masks)
     # return image, boxes, masks
@@ -478,7 +410,8 @@ def do_train(cfg, resume=False):
                     try:
                         results = do_test(cfg, model, iteration)
                         torch.cuda.empty_cache()
-                        visualize_results(cfg, model)
+                        test_ds_name = cfg.dataloader.test.dataset.names
+                        sly_train_results_visualizer.visualize_results(test_ds_name, model)
 
                         if cfg.train.save_best_model:
                             sly.logger.debug(f"{iteration}. save_best_model...")
