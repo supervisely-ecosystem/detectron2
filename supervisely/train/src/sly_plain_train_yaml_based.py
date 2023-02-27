@@ -25,6 +25,7 @@ import os
 from collections import OrderedDict
 import time
 from typing import Optional
+import functools
 
 import cv2
 import torch
@@ -233,7 +234,8 @@ def do_test(cfg, model, current_iter):
         # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
         #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
 
-        data_loader = build_detection_test_loader(cfg, dataset_name)
+        test_mapper = functools.partial(mapper, augment=False)
+        data_loader = build_detection_test_loader(cfg, dataset_name, mapper=test_mapper)
         evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
         #
@@ -271,20 +273,20 @@ def do_test(cfg, model, current_iter):
     return results
 
 
-def mapper(dataset_dict):
+def mapper(dataset_dict, augment=True):
     # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
 
     augmentations = iaa.Sequential([])
-    if g.augs_config_path is not None:
+    if augment and g.augs_config_path is not None:
         augmentations_config = sly.json.load_json_file(g.augs_config_path)
         augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
                                                         random_order=augmentations_config["random_order"])
 
     if g.resize_dimensions is not None:  # resize if needed
         new_h, new_w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
-        augmentations.append(iaa.Resize({"height": new_h, "width": new_w}))
+        augmentations.append(iaa.Resize({"height": new_h, "width": new_w}, "linear"))
         dataset_dict['height'], dataset_dict['width'] = new_h, new_w
 
     _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
@@ -321,7 +323,6 @@ def do_train(cfg, resume=False):
         'iter': 0
     }
 
-    sly.logger.debug("strating training while loop...")
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
@@ -350,9 +351,7 @@ def do_train(cfg, resume=False):
         else:
             data_loader = build_detection_train_loader(cfg)
 
-        sly.logger.debug("Train loader has created!")
         logger.info("training from iteration {}".format(start_iter))
-        sly.logger.debug("strating training for loop...")
         with EventStorage(start_iter) as storage:
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
                 if f.control_training_cycle() == 'stop':
@@ -385,7 +384,7 @@ def do_train(cfg, resume=False):
                     scheduler.step()
                 except:
                     pass
-
+                
                 if (
                         cfg.TEST.EVAL_PERIOD > 0
                         and iteration % cfg.TEST.EVAL_PERIOD == 0
@@ -394,6 +393,7 @@ def do_train(cfg, resume=False):
                     results = do_test(cfg, model, iteration)
                     test_ds_name = cfg.DATASETS.TEST[0]
                     sly_train_results_visualizer.visualize_results(test_ds_name, model)
+                    torch.cuda.empty_cache()
 
                     if cfg.SAVE_BEST_MODEL:
                         sly.logger.debug(f"{iteration}. save_best_model...")

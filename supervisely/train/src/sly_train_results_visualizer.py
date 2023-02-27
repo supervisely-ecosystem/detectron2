@@ -126,8 +126,7 @@ def visualize_results(test_dataset_name, model):
     im = cv2.imread(d["file_name"])
 
     height, width = im.shape[:2]
-    resize_transform = f.get_resize_transform()
-    input = resize_transform.get_transform(im).apply_image(im)
+    input = g.resize_transform.get_transform(im).apply_image(im)
     input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
     input = {"image": input, "height": height, "width": width}
 

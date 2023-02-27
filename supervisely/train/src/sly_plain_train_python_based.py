@@ -279,29 +279,35 @@ def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
     return res[0][0], res[1], res[2]
 
 
-def mapper(dataset_dict, augment=False):
+def mapper(dataset_dict, augment=True):
     # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
 
-    if augment or g.resize_dimensions is not None:
+    if (augment and g.augs_config_path is not None) or g.resize_dimensions is not None:
         augmentations = iaa.Sequential([])
 
-        if g.augs_config_path is not None:
+        if augment and g.augs_config_path is not None:
             augmentations_config = sly.json.load_json_file(g.augs_config_path)
             augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
                                                             random_order=augmentations_config["random_order"])
 
         if g.resize_dimensions is not None:  # resize if needed
-            new_h, new_w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
-            augmentations.append(iaa.Resize({"height": new_h, "width": new_w}))
-            dataset_dict['height'], dataset_dict['width'] = new_h, new_w
+            if g.resize_dimensions.get('target_size'):
+                longer_size = g.resize_dimensions.get('target_size')
+                augmentations.append(iaa.Resize({"longer-side": longer_size, "shorter-side": "keep-aspect-ratio"}, "linear"))
+            else:
+                new_h, new_w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
+                augmentations.append(iaa.Resize({"height": new_h, "width": new_w}, "linear"))
 
         _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
                                                      image, dataset_dict["sly_annotations"], segmentation_type='instance')
 
+        # dataset_dict['height'], dataset_dict['width'] = new_h, new_w
+        dataset_dict.pop('height')
+        dataset_dict.pop('width')
+        
         dataset_dict["image"] = torch.as_tensor(res_img.transpose(2, 0, 1).astype("float32"))
-
         annos = f.get_objects_on_image(res_ann, g.all_classes)
         instances = utils.annotations_to_instances(annos, res_img.shape[:2], mask_format="bitmask")
         dataset_dict["instances"] = utils.filter_empty_instances(instances)
@@ -318,7 +324,6 @@ def mapper(dataset_dict, augment=False):
 def do_train(cfg, resume=False):
     model = instantiate(cfg.model)
     model.train()
-    model = create_ddp_model(model, **cfg.train.ddp)
     model.to(cfg.train.device)
 
     cfg.optimizer.params.model = model
@@ -338,7 +343,6 @@ def do_train(cfg, resume=False):
         'iter': 0
     }
 
-    sly.logger.debug("strating training while loop...")
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
@@ -362,12 +366,11 @@ def do_train(cfg, resume=False):
 
         sly.logger.debug(f"g.augs_config_path: {g.augs_config_path}\ng.resize_dimensions: {g.resize_dimensions}")
         if g.augs_config_path is not None or g.resize_dimensions is not None:
-            cfg.dataloader.test.mapper = functools.partial(mapper, augment=True)
+            cfg.dataloader.test.mapper = functools.partial(mapper, augment=False)
 
         data_loader = instantiate(cfg.dataloader.train)
 
         logger.info("training from iteration {}".format(start_iter))
-        sly.logger.debug("strating training for loop...")
         with EventStorage(start_iter) as storage:
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
 
@@ -401,7 +404,7 @@ def do_train(cfg, resume=False):
                     scheduler.step()
                 except:
                     pass
-                torch.cuda.empty_cache()
+
                 if (
                         cfg.train.eval_period > 0
                         and iteration % cfg.train.eval_period == 0
@@ -409,9 +412,9 @@ def do_train(cfg, resume=False):
                     sly.logger.debug(f"{iteration}. starting eval...")
                     try:
                         results = do_test(cfg, model, iteration)
-                        torch.cuda.empty_cache()
                         test_ds_name = cfg.dataloader.test.dataset.names
                         sly_train_results_visualizer.visualize_results(test_ds_name, model)
+                        torch.cuda.empty_cache()
 
                         if cfg.train.save_best_model:
                             sly.logger.debug(f"{iteration}. save_best_model...")

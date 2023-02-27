@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import sys
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 import supervisely as sly
 from supervisely.app.v1.app_service import AppService
 
@@ -29,8 +29,8 @@ sys.path.append(source_path)
 # only for convenient debug
 debug_env_path = os.path.join(root_source_dir, "supervisely/train", "debug.env")
 secret_debug_env_path = os.path.join(root_source_dir, "supervisely/train", "secret_debug.env")
-# load_dotenv(debug_env_path)
-# load_dotenv(secret_debug_env_path, override=True)
+load_dotenv(os.path.expanduser("~/supervisely.env"))
+load_dotenv(debug_env_path)
 
 my_app = AppService()
 api = my_app.public_api
@@ -83,3 +83,4 @@ seg_project_meta = None
 
 need_convert_to_sly = True
 need_register_datasets = True
+resize_transform = None

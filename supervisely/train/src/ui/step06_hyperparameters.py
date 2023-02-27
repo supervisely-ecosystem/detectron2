@@ -18,7 +18,9 @@ def load_default_basic_config(state):
     state["gpusId"] = '0'
     state['evalInterval'] = 10
 
-    state["resizeImage"] = False
+    state["resizeImage"] = True
+    state["keepAspectRatio"] = True
+    state["targetImageSize"] = 512
     state["resizeImageSizes"] = {"height": 256, "width": 256}
     state["batchSize"] = 2
     state["batchSizePerImage"] = 128
@@ -126,10 +128,13 @@ def use_hyp(api: sly.Api, task_id, context, state, app_logger):
     vis_step = calc_visualization_step(get_iters_num(state))
 
     if state['resizeImage']:
-        g.resize_dimensions = {
-            'h': state['resizeImageSizes']['height'],
-            'w': state['resizeImageSizes']['width']
-        }
+        if state['keepAspectRatio']:
+            g.resize_dimensions = {'target_size': state['targetImageSize']}
+        else:
+            g.resize_dimensions = {
+                'h': state['resizeImageSizes']['height'],
+                'w': state['resizeImageSizes']['width']
+            }
     else:
         g.resize_dimensions = None
 

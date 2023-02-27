@@ -4,17 +4,12 @@ import logging
 import numpy as np
 import pycocotools.mask
 import yaml
-from detectron2.structures import BoxMode
+
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.utils.visualizer import Visualizer
-from detectron2.structures import BoxMode
-
 from detectron2.engine import DefaultTrainer
-from detectron2 import model_zoo
-
 from detectron2.modeling import build_model
-
-from detectron2.config import LazyConfig
+from detectron2.config import LazyConfig, instantiate
+from detectron2.data.transforms import ResizeShortestEdge, Resize
 
 import json
 import os
@@ -23,27 +18,26 @@ import random
 from functools import partial
 from PIL import Image
 import shutil
+from itertools import groupby
 
 from omegaconf import DictConfig
 from yacs.config import CfgNode
 
-import sly_plain_train_python_based
-import sly_train_results_visualizer
+import supervisely as sly
 from supervisely.app.v1.widgets.compare_gallery import CompareGallery
 from supervisely.app.v1.widgets.progress_bar import ProgressBar
 from supervisely.app.v1.widgets.chart import Chart
 
+import sly_plain_train_yaml_based
+import sly_plain_train_python_based
+import sly_train_results_visualizer
+import sly_globals as g
+import sly_functions as f
 import step02_splits
+import step03_classes
 import step04_augs
 import step05_models
-import supervisely as sly
-import sly_globals as g
-import step03_classes
 
-from itertools import groupby
-
-import sly_plain_train_yaml_based
-import sly_functions as f
 
 _open_lnk_name = "open_app.lnk"
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
@@ -407,6 +401,29 @@ def configure_trainer(state):
     return cfg, config_path
 
 
+def get_resize_transform(cfg):
+    try:
+        if g.resize_dimensions:
+            h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
+            resize_transform = Resize([h, w])
+        else:
+            if isinstance(cfg, (LazyConfig, DictConfig)):
+                test_mapper = cfg.dataloader.test.mapper
+                resize_transform: ResizeShortestEdge = instantiate(test_mapper['augmentations'][0])
+            elif isinstance(cfg, CfgNode):
+                resize_transform = ResizeShortestEdge(
+                    [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+                )
+            else:
+                raise Exception(f"Unexpected config type: {type(cfg)}.")
+    except Exception as exc:
+        sly.logger.warn(f"Can't read resize_transform from config: {exc}."
+                        " Using detectron2 defautls: size_min=800, size_max=1333.")
+        resize_transform = ResizeShortestEdge([800, 800], 1333)
+    print("resize_transform:", type(resize_transform), resize_transform.__dict__)
+    return resize_transform
+
+
 @g.my_app.callback("update_train_cycle")
 @sly.update_fields
 @sly.timeit
@@ -451,9 +468,6 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         else:
             project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
 
-        # TRAIN HERE
-        # --------
-
         configure_datasets(state, project_dir_seg)
         cfg, config_path = configure_trainer(state)
 
@@ -469,19 +483,25 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         g.sly_progresses['iter'].set(value=0, force_update=True)
 
         if os.path.isdir(output_dir):
-            shutil.rmtree(output_dir)
-            os.makedirs(output_dir, exist_ok=True)
+            for f in os.listdir(output_dir):
+                path = os.path.join(output_dir, f)
+                if os.path.isfile(path):
+                    os.remove(path)
 
         save_config_locally(cfg, config_path)
         sly.logger.debug(config_path)
         sly.logger.debug(cfg)
 
+        # TRAIN HERE
+        # --------
+
         if config_path.endswith('.py') or config_path.endswith('.json'):
             sly.logger.debug("training with .py config")
-            g.test_mapper = cfg.dataloader.test.mapper
+            g.resize_transform = get_resize_transform(cfg)
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
             sly.logger.debug("training with .yaml config")
+            g.resize_transform = get_resize_transform(cfg)
             sly_plain_train_yaml_based.do_train(cfg=cfg)
 
         # # --------

@@ -12,8 +12,7 @@ import supervisely as sly
 import sly_globals as g
 
 from detectron2.config import get_cfg, LazyConfig
-from detectron2.data.transforms import ResizeShortestEdge, Resize
-from detectron2.config import get_cfg, instantiate
+from detectron2.config import get_cfg
 
 
 def get_pretrained_models():
@@ -338,17 +337,3 @@ def update_config_by_custom(cfg, updates):
             cfg[k] = v
 
     return cfg
-
-
-def get_resize_transform():
-    try:
-        if g.resize_dimensions:
-            h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
-            resize_transform = Resize([h, w])
-        else:
-            resize_transform: ResizeShortestEdge = instantiate(g.test_mapper['augmentations'][0])
-    except Exception as exc:
-        sly.logger.warn(f"can't read input_size and/or input_format from config: {exc}."
-                        "Defaulting to min: 800, max: 1333, format: BGR.")
-        resize_transform = ResizeShortestEdge([800, 800], 1333)
-    return resize_transform

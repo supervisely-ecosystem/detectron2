@@ -44,6 +44,17 @@
                 // "modal.state.selectedModel.COCO": "R50-DC5 (3x)",
                 // "modal.state.weightsPath": "",
             }
-        }
+        },
+        {
+            "name": "Train debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/supervisely/train/src/sly_train.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "LOG_LEVEL": "DEBUG",
+            }
+        },
     ]
 }
