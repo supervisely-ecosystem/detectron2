@@ -46,7 +46,7 @@
             }
         },
         {
-            "name": "Train debug",
+            "name": "Train Debug",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/supervisely/train/src/sly_train.py",

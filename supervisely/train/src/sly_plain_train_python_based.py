@@ -303,9 +303,7 @@ def mapper(dataset_dict, augment=True):
         _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
                                                      image, dataset_dict["sly_annotations"], segmentation_type='instance')
 
-        # dataset_dict['height'], dataset_dict['width'] = new_h, new_w
-        dataset_dict.pop('height')
-        dataset_dict.pop('width')
+        dataset_dict['height'], dataset_dict['width'] = res_img.shape[:2]
         
         dataset_dict["image"] = torch.as_tensor(res_img.transpose(2, 0, 1).astype("float32"))
         annos = f.get_objects_on_image(res_ann, g.all_classes)
