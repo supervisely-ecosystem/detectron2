@@ -404,8 +404,12 @@ def configure_trainer(state):
 def get_resize_transform(cfg):
     try:
         if g.resize_dimensions:
-            h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
-            resize_transform = Resize([h, w])
+            if g.resize_dimensions.get("target_size"):
+                size = g.resize_dimensions.get("target_size")
+                resize_transform = ResizeShortestEdge([size, size], size)
+            else:
+                h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
+                resize_transform = Resize([h, w])
         else:
             if isinstance(cfg, (LazyConfig, DictConfig)):
                 test_mapper = cfg.dataloader.test.mapper

@@ -2,6 +2,7 @@ import functools
 import json
 import os
 import time
+import copy
 
 import numpy as np
 import pycocotools.mask
@@ -13,6 +14,9 @@ import sly_globals as g
 
 from detectron2.config import get_cfg, LazyConfig
 from detectron2.config import get_cfg
+from detectron2.data import detection_utils as utils
+import imgaug.augmenters as iaa
+import torch
 
 
 def get_pretrained_models():
@@ -337,3 +341,43 @@ def update_config_by_custom(cfg, updates):
             cfg[k] = v
 
     return cfg
+
+
+def mapper(dataset_dict, augment=True):
+    # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
+    dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+    image = utils.read_image(dataset_dict["file_name"], format="BGR")
+
+    if (augment and g.augs_config_path is not None) or g.resize_dimensions is not None:
+        augmentations = iaa.Sequential([])
+
+        if augment and g.augs_config_path is not None:
+            augmentations_config = sly.json.load_json_file(g.augs_config_path)
+            augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
+                                                            random_order=augmentations_config["random_order"])
+
+        if g.resize_dimensions is not None:  # resize if needed
+            if g.resize_dimensions.get('target_size'):
+                longer_size = g.resize_dimensions.get('target_size')
+                augmentations.append(iaa.Resize({"longer-side": longer_size, "shorter-side": "keep-aspect-ratio"}, "linear"))
+            else:
+                new_h, new_w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
+                augmentations.append(iaa.Resize({"height": new_h, "width": new_w}, "linear"))
+
+        _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
+                                                     image, dataset_dict["sly_annotations"], segmentation_type='instance')
+
+        dataset_dict['height'], dataset_dict['width'] = res_img.shape[:2]
+        dataset_dict["image"] = torch.as_tensor(res_img.transpose(2, 0, 1).astype("float32"))
+        annos = get_objects_on_image(res_ann, g.all_classes)
+        instances = utils.annotations_to_instances(annos, res_img.shape[:2], mask_format="bitmask")
+        dataset_dict["instances"] = utils.filter_empty_instances(instances)
+
+    else:
+        dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
+        annos = get_objects_on_image(dataset_dict["sly_annotations"], g.all_classes)
+        instances = utils.annotations_to_instances(annos, image.shape[:2], mask_format="bitmask")
+        dataset_dict["instances"] = utils.filter_empty_instances(instances)
+
+    return dataset_dict
+
