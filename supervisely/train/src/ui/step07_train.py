@@ -4,17 +4,12 @@ import logging
 import numpy as np
 import pycocotools.mask
 import yaml
-from detectron2.structures import BoxMode
+
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.utils.visualizer import Visualizer
-from detectron2.structures import BoxMode
-
 from detectron2.engine import DefaultTrainer
-from detectron2 import model_zoo
-
 from detectron2.modeling import build_model
-
-from detectron2.config import LazyConfig
+from detectron2.config import LazyConfig, instantiate
+from detectron2.data.transforms import ResizeShortestEdge, Resize
 
 import json
 import os
@@ -23,27 +18,26 @@ import random
 from functools import partial
 from PIL import Image
 import shutil
+from itertools import groupby
 
 from omegaconf import DictConfig
 from yacs.config import CfgNode
 
-import sly_plain_train_python_based
-import sly_train_results_visualizer
+import supervisely as sly
 from supervisely.app.v1.widgets.compare_gallery import CompareGallery
 from supervisely.app.v1.widgets.progress_bar import ProgressBar
 from supervisely.app.v1.widgets.chart import Chart
 
+import sly_plain_train_yaml_based
+import sly_plain_train_python_based
+import sly_train_results_visualizer
+import sly_globals as g
+import sly_functions as f
 import step02_splits
+import step03_classes
 import step04_augs
 import step05_models
-import supervisely as sly
-import sly_globals as g
-import step03_classes
 
-from itertools import groupby
-
-import sly_plain_train_yaml_based
-import sly_functions as f
 
 _open_lnk_name = "open_app.lnk"
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
@@ -73,7 +67,7 @@ def init(data, state):
 
     data["previewPredLinks"] = []
 
-    state["currEpochPreview"] = 1
+    state["currEpochPreview"] = 0
     state["visStep"] = 0
 
     state["followLastPrediction"] = True
@@ -252,8 +246,10 @@ def configure_datasets(state, project_seg_dir_path):
     get_validation = functools.partial(convert_data_to_detectron, project_seg_dir_path=project_seg_dir_path,
                                        set_path=step02_splits.val_set_path)
 
-    DatasetCatalog.register("main_train", get_train)
-    DatasetCatalog.register("main_validation", get_validation)
+    if g.need_register_datasets:
+        DatasetCatalog.register("main_train", get_train)
+        DatasetCatalog.register("main_validation", get_validation)
+        g.need_register_datasets = False
 
     MetadataCatalog.get("main_train").thing_classes = list(g.all_classes.keys())
     MetadataCatalog.get("main_validation").thing_classes = list(g.all_classes.keys())
@@ -361,6 +357,7 @@ def load_supervisely_parameters(cfg, state):
         })
     else:
         cfg.INPUT.MASK_FORMAT = 'bitmask'
+        cfg.INPUT.FORMAT = 'BGR'
 
         cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
         cfg.SAVE_BEST_MODEL = state['checkpointSaveBest']
@@ -381,6 +378,8 @@ def save_config_locally(cfg, config_path):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         clear_config = step05_models.remove_not_scalars_dict(cfg)
+        if g.resize_transform:
+            clear_config["inference_resize_transform"] = serialize_resize_transform(g.resize_transform)
 
         with open(output_path, 'w') as file:
             json.dump(clear_config, fp=file, indent=4)
@@ -388,6 +387,11 @@ def save_config_locally(cfg, config_path):
     else:
         output_path = os.path.join(cfg.OUTPUT_DIR, 'model_config.yaml')
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        if g.resize_transform:
+            d: dict = serialize_resize_transform(g.resize_transform)
+            d = {"inference_resize_transform": d}
+            node = CfgNode(d)
+            cfg.merge_from_other_cfg(node)
         with open(output_path, 'w') as outfile:
             yaml.dump(cfg, outfile, default_flow_style=False)
 
@@ -403,6 +407,58 @@ def configure_trainer(state):
     load_supervisely_parameters(cfg, state)
 
     return cfg, config_path
+
+
+def get_resize_transform(cfg):
+    # Used at visualization and further inference in serving
+    try:
+        if g.resize_dimensions:
+            if g.resize_dimensions.get("target_size"):
+                size = g.resize_dimensions.get("target_size")
+                resize_transform = ResizeShortestEdge([size, size], size)
+            else:
+                h, w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
+                resize_transform = Resize([h, w])
+        else:
+            if isinstance(cfg, (LazyConfig, DictConfig)):
+                test_mapper = cfg.dataloader.test.mapper
+                resize_transform: ResizeShortestEdge = instantiate(test_mapper['augmentations'][0])
+            elif isinstance(cfg, CfgNode):
+                resize_transform = ResizeShortestEdge(
+                    [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+                )
+            else:
+                raise Exception(f"Unexpected config type: {type(cfg)}.")
+    except Exception as exc:
+        sly.logger.warn(f"Can't read resize_transform from config: {exc}."
+                        " Using detectron2 defautls: size_min=800, size_max=1333.")
+        resize_transform = ResizeShortestEdge([800, 800], 1333)
+    sly.logger.debug("resize_transform:", type(resize_transform), resize_transform.__dict__)
+    return resize_transform
+
+
+def serialize_resize_transform(resize_transform):
+    res = {}
+    if isinstance(resize_transform, ResizeShortestEdge):
+        res['class'] = "ResizeShortestEdge"
+        res['params'] = {"short_edge_length": resize_transform.short_edge_length, "max_size": resize_transform.max_size}
+    elif isinstance(resize_transform, Resize):
+        res['class'] = "Resize"
+        res['params'] = {"shape": resize_transform.shape}
+    else:
+        raise Exception(f"Unexpected class of 'resize_transform': {type(resize_transform)}. Can't serialize it.")
+    return res
+
+
+def deserialize_resize_transform(resize_transform: dict):
+    cls = resize_transform['class']
+    if cls == "ResizeShortestEdge":
+        res = ResizeShortestEdge(**resize_transform['params'])
+    elif cls == "Resize":
+        res = Resize(**resize_transform['params'])
+    else:
+        raise Exception(f"Unexpected class of 'resize_transform': {cls}. Can't deserialize it.")
+    return res
 
 
 @g.my_app.callback("update_train_cycle")
@@ -421,7 +477,9 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
     if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
         # fields_to_update['state.followLastPrediction'] = False
 
-        index = int(state['currEpochPreview'] / state["visStep"]) - 1
+        index = int(state['currEpochPreview'] / state["evalInterval"])
+
+        sly.logger.debug(f'{state["evalInterval"]=}, {index=}, {state["currEpochPreview"]=}, {state["followLastPrediction"]=}')
 
         gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
         sly_train_results_visualizer.update_preview_by_index(index, gallery_preview)
@@ -433,17 +491,18 @@ def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_t
 @g.my_app.ignore_errors_and_show_dialog_window()
 def train(api: sly.Api, task_id, context, state, app_logger):
     try:
-        # convert project to segmentation masks
-        project_dir_seg = convert_supervisely_to_segmentation(state)
-        project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
-        g.seg_project_meta = project_seg.meta
-        classes_json = project_seg.meta.obj_classes.to_json()
-        classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
-
-        sly.json.dump_json_file(classes_json, model_classes_path)
-
-        # TRAIN HERE
-        # --------
+        sly.logger.debug(f"{g.need_convert_to_sly=}")
+        if g.need_convert_to_sly:
+            # convert project to segmentation masks
+            project_dir_seg = convert_supervisely_to_segmentation(state)
+            project_seg = sly.Project(project_dir_seg, sly.OpenMode.READ)
+            g.seg_project_meta = project_seg.meta
+            classes_json = project_seg.meta.obj_classes.to_json()
+            classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
+            sly.json.dump_json_file(classes_json, model_classes_path)
+            g.need_convert_to_sly = False
+        else:
+            project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
 
         configure_datasets(state, project_dir_seg)
         cfg, config_path = configure_trainer(state)
@@ -460,14 +519,22 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         g.sly_progresses['iter'].set(value=0, force_update=True)
 
         if os.path.isdir(output_dir):
-            shutil.rmtree(output_dir)
-            os.makedirs(output_dir, exist_ok=True)
+            for f in os.listdir(output_dir):
+                path = os.path.join(output_dir, f)
+                if os.path.isfile(path):
+                    os.remove(path)
 
+        g.resize_transform = get_resize_transform(cfg)
         save_config_locally(cfg, config_path)
+        
+        # TRAIN HERE
+        # --------
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
+            sly.logger.debug("training with .py config")
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
+            sly.logger.debug("training with .yaml config")
             sly_plain_train_yaml_based.do_train(cfg=cfg)
 
         # # --------

@@ -26,6 +26,7 @@ import os
 from collections import OrderedDict
 import time
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import torch
@@ -67,8 +68,6 @@ import sly_globals as g
 import sly_train_results_visualizer
 import sly_functions as f
 
-from detectron2.data import detection_utils as utils
-import imgaug.augmenters as iaa
 
 logger = logging.getLogger("detectron2")
 
@@ -228,16 +227,10 @@ def do_test(cfg, model, current_iter):
 
     dataset_name = cfg.dataloader.test.dataset.names
     output_folder = os.path.join(cfg.train.output_dir, "inference", dataset_name)
-    # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
-    #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
 
     data_loader = instantiate(cfg.dataloader.test)
     evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
-    #
-    # evaluator = get_evaluator(
-    #     cfg, dataset_name,
-    # )
     results_i = inference_on_dataset(model, data_loader, evaluator)
     results[dataset_name] = results_i
     if comm.is_main_process():
@@ -246,9 +239,8 @@ def do_test(cfg, model, current_iter):
 
     if len(results) == 1:
         results = list(results.values())[0]
-        print(f'{results=}')
-        segm_res = dict(dict(results).get('segm',
-                                          {}))  # contain keys: ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'AP-kiwi', 'AP-lemon', 'AP-__bg__']
+        segm_res = dict(dict(results).get('segm', {}))
+        # contain keys: ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'AP-kiwi', 'AP-lemon', 'AP-__bg__']
 
         # updating SLY charts
         g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP', 0) / 100), 3),
@@ -263,105 +255,17 @@ def do_test(cfg, model, current_iter):
             if segm_res.get(key, None) is not None:
                 segm_res.pop(key)
 
-        g.metrics_for_each_epoch[current_iter + 1] = segm_res
+        g.metrics_for_each_epoch[current_iter] = segm_res
         g.metrics_for_each_epoch[-1] = segm_res
 
-        print(g.metrics_for_each_epoch)
+        g.metrics_for_each_epoch
 
     return results
-
-
-def get_visualizer(im, dataset_meta):
-    return Visualizer(im[:, :, ::-1],
-                      metadata=dataset_meta,
-                      scale=1
-                      # remove the colors of unsegmented pixels. This option is only available for segmentation models
-                      )
-
-
-def visualize_results(cfg, model):
-    model.eval()
-    checkpointer = DetectionCheckpointer(model, save_dir=cfg.train.output_dir)
-    checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
-
-    cfg.train.init_checkpoint = os.path.join(cfg.train.output_dir, "last_saved_model.pth")  # path to the model we just trained
-
-    DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
-
-    test_ds_name = cfg.dataloader.test.dataset.names
-    test_ds = DatasetCatalog.get(test_ds_name)
-
-    test_metadata = MetadataCatalog.get("main_validation")
-
-    d = test_ds[0]
-    # d = mapper(d)  # debug_augmentation
-
-    im = cv2.imread(d["file_name"])
-    d["image"] = torch.as_tensor(im.transpose(2, 0, 1).astype("float32"))
-
-    outputs = model([d])
-
-    gt_vis = get_visualizer(im, test_metadata)
-    out_t = gt_vis.draw_dataset_dict(d)
-    output_image_truth = out_t.get_image()[:, :, ::-1]
-
-    pred_vis = get_visualizer(im, test_metadata)
-    out_p = pred_vis.draw_instance_predictions(outputs[0]["instances"].to("cpu"))
-    output_image_pred = out_p.get_image()[:, :, ::-1]
-
-    output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
-    output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
-
-    sly_train_results_visualizer.preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
-    model.train()
-
-
-def apply_augmentation(augs: iaa.Sequential, img, boxes=None, masks=None):
-    res = augs(images=[img], bounding_boxes=boxes, segmentation_maps=masks)
-    # return image, boxes, masks
-    return res[0][0], res[1], res[2]
-
-
-def mapper(dataset_dict, augment=False):
-    # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
-    dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
-    image = utils.read_image(dataset_dict["file_name"], format="BGR")
-
-    if augment or g.resize_dimensions is not None:
-        augmentations = iaa.Sequential([])
-
-        if g.augs_config_path is not None:
-            augmentations_config = sly.json.load_json_file(g.augs_config_path)
-            augmentations = sly.imgaug_utils.build_pipeline(augmentations_config["pipeline"],
-                                                            random_order=augmentations_config["random_order"])
-
-        if g.resize_dimensions is not None:  # resize if needed
-            new_h, new_w = g.resize_dimensions.get('h'), g.resize_dimensions.get('w')
-            augmentations.append(iaa.Resize({"height": new_h, "width": new_w}))
-            dataset_dict['height'], dataset_dict['width'] = new_h, new_w
-
-        _, res_img, res_ann = sly.imgaug_utils.apply(augmentations, g.seg_project_meta,
-                                                     image, dataset_dict["sly_annotations"], segmentation_type='instance')
-
-        dataset_dict["image"] = torch.as_tensor(res_img.transpose(2, 0, 1).astype("float32"))
-
-        annos = f.get_objects_on_image(res_ann, g.all_classes)
-        instances = utils.annotations_to_instances(annos, res_img.shape[:2], mask_format="bitmask")
-        dataset_dict["instances"] = utils.filter_empty_instances(instances)
-
-    else:
-        dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
-        annos = f.get_objects_on_image(dataset_dict["sly_annotations"], g.all_classes)
-        instances = utils.annotations_to_instances(annos, image.shape[:2], mask_format="bitmask")
-        dataset_dict["instances"] = utils.filter_empty_instances(instances)
-
-    return dataset_dict
 
 
 def do_train(cfg, resume=False):
     model = instantiate(cfg.model)
     model.train()
-    model = create_ddp_model(model, **cfg.train.ddp)
     model.to(cfg.train.device)
 
     cfg.optimizer.params.model = model
@@ -381,10 +285,12 @@ def do_train(cfg, resume=False):
         'iter': 0
     }
 
+    thread_pool = ThreadPoolExecutor(2)  # for writers
+
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
             if start_iter != 0:
-                # start_iter += 1
+                start_iter += 1
                 max_iter += cfg.train.max_iter
                 g.sly_progresses['iter'].set_total(max_iter - 1)
         else:
@@ -400,10 +306,8 @@ def do_train(cfg, resume=False):
         # compared to "train_net.py", we do not support accurate timing and
         # precise BN here, because they are not trivial to implement in a small training loop
 
-        cfg.dataloader.train.mapper = mapper
-
-        if g.augs_config_path is not None or g.resize_dimensions is not None:
-            cfg.dataloader.test.mapper = functools.partial(mapper, augment=True)
+        cfg.dataloader.train.mapper = f.mapper
+        cfg.dataloader.test.mapper = functools.partial(f.mapper, augment=False, replace_size=False)
 
         data_loader = instantiate(cfg.dataloader.train)
 
@@ -412,12 +316,15 @@ def do_train(cfg, resume=False):
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
 
                 if f.control_training_cycle() == 'stop':
+                    checkpointer.save("last_saved_model")
                     return 0
 
                 start_iter = iteration
                 storage.iter = iteration
 
+                sly.logger.debug(f"{iteration}. forward...")
                 loss_dict = model(data)
+                sly.logger.debug(f"{iteration}. forward done!")
                 losses = sum(loss_dict.values())
                 assert torch.isfinite(losses).all(), loss_dict
 
@@ -426,54 +333,49 @@ def do_train(cfg, resume=False):
                 if comm.is_main_process():
                     storage.put_scalars(total_loss=losses_reduced, **loss_dict_reduced)
 
+                sly.logger.debug(f"{iteration}. backward+step...")
                 optimizer.zero_grad()
                 losses.backward()
                 optimizer.step()
+                sly.logger.debug(f"{iteration}. backward+step done!")
                 storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
+
+                g.sly_progresses['iter'].set(iteration, force_update=True)
 
                 try:
                     scheduler.step()
                 except:
                     pass
-                torch.cuda.empty_cache()
+
                 if (
                         cfg.train.eval_period > 0
                         and iteration % cfg.train.eval_period == 0
-                        and iteration != max_iter - 1
                 ):
+                    sly.logger.debug(f"{iteration}. starting eval...")
                     try:
                         results = do_test(cfg, model, iteration)
+                        test_ds_name = cfg.dataloader.test.dataset.names
+                        sly_train_results_visualizer.visualize_results(test_ds_name, model)
                         torch.cuda.empty_cache()
 
                         if cfg.train.save_best_model:
+                            sly.logger.debug(f"{iteration}. save_best_model...")
                             f.save_best_model(checkpointer, best_model_info, results, iteration)
                     except Exception as ex:
                         logger.warning(f"{ex} while testing")
+                        raise ex
                     # Compared to "train_net.py", the test results are not dumped to EventStorage
                     comm.synchronize()
 
-                if (
-                        cfg.test.vis_period > 0
-                        and (iteration + 1) % cfg.test.vis_period == 0
-                        and iteration != max_iter - 1
-                ):
-                    try:
-                        results = do_test(cfg, model, iteration)
-                        torch.cuda.empty_cache()
-                        visualize_results(cfg, model)
-
-                        if cfg.train.save_best_model:
-                            f.save_best_model(checkpointer, best_model_info, results, iteration)
-                    except Exception as ex:
-                        logger.warning(f"{ex} while testing")
-                    comm.synchronize()
-
                 if iteration % 10 == 0 or iteration == max_iter - 1:
+                    sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
-                        writer.write()
+                        if isinstance(writer, SuperviselyMetricPrinter):
+                            ft = thread_pool.submit(writer.write)
+                        else:
+                            writer.write()
+                
                 periodic_checkpointer.step(iteration)
-
-        # g.sly_progresses['iter'].set(max_iter)
 
         g.training_controllers['pause'] = True
         g.api.task.set_field(g.task_id, 'state.trainOnPause', True)

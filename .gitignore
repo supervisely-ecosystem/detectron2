@@ -62,3 +62,4 @@ html_kit/_static/*
 authorized_keys
 supervisely_lib
 results
+/log.py

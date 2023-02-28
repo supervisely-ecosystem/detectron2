@@ -60,6 +60,8 @@ def use_classes(api: sly.Api, task_id, context, state, app_logger):
         {"field": "state.activeStep", "payload": 4},
     ]
     g.api.app.set_fields(g.task_id, fields)
+    sly.logger.debug(f"{g.need_convert_to_sly=}")
+    g.need_convert_to_sly = True
 
 
 def restart(data, state):

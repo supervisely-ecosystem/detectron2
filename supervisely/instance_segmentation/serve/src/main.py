@@ -13,14 +13,15 @@ import pretrained_models
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg, LazyConfig, instantiate
 from detectron2.data import MetadataCatalog, DatasetCatalog
-from detectron2.data.transforms import ResizeShortestEdge
+from detectron2.data.transforms import ResizeShortestEdge, Resize
 from detectron2.modeling import build_model 
 
 
 root_source_path = str(Path(__file__).parents[4])
 app_source_path = str(Path(__file__).parents[1])
 
-load_dotenv(os.path.join(app_source_path, "local.env"))
+# load_dotenv(os.path.join(app_source_path, "local.env"))
+load_dotenv(os.path.join(app_source_path, "local-custom.env"))
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 
 api = sly.Api()
@@ -86,21 +87,40 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
             model = instantiate(cfg.model)
-            try:
-                self.resize_transform = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
-                self.input_format = instantiate(cfg.dataloader['test']['mapper']['image_format'])
-            except Exception as exc:
-                sly.logger.warn(f"can't read input_size and/or input_format from config: {exc}."
-                "Defaulting to min: 800, max: 1333, format: BGR.")
-                self.resize_transform = ResizeShortestEdge([800, 800], 1333)
-                self.input_format = "BGR"
-
         else:
             model = build_model(cfg)
-            self.resize_transform = ResizeShortestEdge(
-                [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
-            )
-            self.input_format = cfg.INPUT.FORMAT
+
+        ### Loading inference resize transfrom
+        try:
+            if config_path.endswith('.py') or config_path.endswith('.json'):
+                if model_weights_option == "custom":
+                    if config_dict.get("inference_resize_transform"):
+                        self.resize_transform = deserialize_resize_transform(config_dict["inference_resize_transform"])
+                    else:
+                        self.resize_transform = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
+                    self.input_format = "BGR"
+                else:
+                    self.resize_transform = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
+                    self.input_format = instantiate(cfg.dataloader['test']['mapper']['image_format'])
+            else:
+                if model_weights_option == "custom":
+                    if hasattr(cfg, "inference_resize_transform"):
+                        self.resize_transform = deserialize_resize_transform(dict(cfg.inference_resize_transform))
+                    else:
+                        self.resize_transform = ResizeShortestEdge(
+                            [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+                        )
+                    self.input_format = "BGR"
+                else:
+                    self.resize_transform = ResizeShortestEdge(
+                        [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+                    )
+                    self.input_format = cfg.INPUT.FORMAT
+        except Exception as exc:
+            sly.logger.warn(f"Can't read input_size and/or input_format from config: {exc}."
+                            " Using detectron2 defautls: size_min=800, size_max=1333, foramt=BGR.")
+            self.resize_transform = ResizeShortestEdge([800, 800], 1333)
+            self.input_format = "BGR"
 
         model.eval()
         DetectionCheckpointer(model).load(weights_path)
@@ -194,6 +214,18 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
         input = {"image": image, "height": height, "width": width}
         return input
+
+
+def deserialize_resize_transform(resize_transform):
+    cls = resize_transform['class']
+    if cls == "ResizeShortestEdge":
+        res = ResizeShortestEdge(**resize_transform['params'])
+    elif cls == "Resize":
+        res = Resize(**resize_transform['params'])
+    else:
+        raise Exception(f"Unexpected class of 'resize_transform': {cls}. Can't deserialize it.")
+    return res
+
 
 sly.logger.info("Script arguments", extra={
     "teamId": sly.env.team_id(),

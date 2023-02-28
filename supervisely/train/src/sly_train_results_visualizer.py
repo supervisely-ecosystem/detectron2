@@ -1,22 +1,26 @@
-import datetime
-import logging
+import os
 import time
-from typing import Optional
+import numpy as np
+import cv2
+import torch
 
+from detectron2.utils.visualizer import Visualizer
 from detectron2.utils.events import EventWriter
+from detectron2.data import DatasetCatalog, MetadataCatalog
 
 from supervisely.app.v1.widgets.compare_gallery import CompareGallery
-
 import sly_globals as g
-import os
+import sly_functions as f
+import supervisely as sly
 
 
 def preview_predictions(gt_image, pred_image):
-    gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
     append_gallery(gt_image, pred_image)
 
     follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
-    if follow_last_prediction:
+    currEpochPreview = g.api.app.get_field(g.task_id, 'state.currEpochPreview')
+    if currEpochPreview == 0 and follow_last_prediction:
+        gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
         update_preview_by_index(-1, gallery_preview)
         update_metrics_table_by_by_index(-1)
 
@@ -66,8 +70,8 @@ def append_gallery(gt_image, pred_image):
 
     fields = [
         {"field": "state.currEpochPreview",
-         "payload": len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) *
-                    g.api.app.get_field(g.task_id, 'state.visStep')},
+         "payload": (len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) - 1) *
+                    g.api.app.get_field(g.task_id, 'state.evalInterval')},
     ]
 
     follow_last_prediction = g.api.app.get_field(g.task_id, 'state.followLastPrediction')
@@ -90,3 +94,55 @@ def update_metrics_table_by_by_index(index):
 
     g.api.app.set_field(g.task_id, 'data.metricsTable', table_to_upload)
 
+
+def calc_scale(image: np.ndarray, target_resolution=960):
+    h, w = image.shape[:2]
+    scale = target_resolution / max(h, w)
+    scale = min(scale, 1.0)  # only downsample
+    return scale
+
+
+def get_visualizer(im, dataset_meta, scale=1.0):
+    return Visualizer(im[:, :, ::-1],
+                      metadata=dataset_meta,
+                      scale=scale
+                      # remove the colors of unsegmented pixels. This option is only available for segmentation models
+                      )
+
+
+def visualize_results(test_dataset_name, model):
+    sly.logger.debug("Enter in visualize_results...")
+
+    model.eval()
+    test_ds = DatasetCatalog.get(test_dataset_name)
+    test_metadata = MetadataCatalog.get("main_validation")
+
+    d = test_ds[0]
+    
+    im = cv2.imread(d["file_name"])
+
+    height, width = im.shape[:2]
+    input = g.resize_transform.get_transform(im).apply_image(im)
+    input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
+    input = {"image": input, "height": height, "width": width}
+
+    sly.logger.debug("model forward...")
+    with torch.no_grad():
+        outputs = model([input])
+    sly.logger.debug("model forward done!")
+
+    scale = calc_scale(im)
+
+    gt_vis = get_visualizer(im, test_metadata, scale=scale)
+    out_t = gt_vis.draw_dataset_dict(d)
+    output_image_truth = out_t.get_image()[:, :, ::-1]
+
+    pred_vis = get_visualizer(im, test_metadata, scale=scale)
+    out_p = pred_vis.draw_instance_predictions(outputs[0]["instances"].to("cpu"))
+    output_image_pred = out_p.get_image()[:, :, ::-1]
+
+    output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
+    output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)
+
+    preview_predictions(gt_image=output_image_truth, pred_image=output_image_pred)
+    model.train()

@@ -87,25 +87,29 @@
                 <sly-field title="Batch size per image"
                            description="Number of regions per image"
                 >
-                    <el-input-number v-model="state.batchSizePerImage" :min="4"
+                    <el-input-number v-model="state.batchSizePerImage" :min="1"
                                      :disabled="data.done6"></el-input-number>
                 </sly-field>
 
-                <sly-field title="Resize"
-                           description="resize images to WxH in pixels">
-                    <!--            <el-input-number v-model="state.imgSize" :min="64" :step="32" :disabled="data.done6"></el-input-number>-->
-
+                <b>Resize</b></br>
                     <el-switch
                             style="padding: 10px 0"
                             v-model="state.resizeImage"
                             :disabled="data.done6"
                             on-text=""
                             off-text="">
-                    </el-switch
-                            >
-                    <sly-size v-model="state.resizeImageSizes" :options="{proportions: {width: 256, height: 256}}"
-                              :disabled="data.done6 || !state.resizeImage"></sly-size>
-                </sly-field>
+                    </el-switch>
+
+                    <div style="margin-left: 20px;">
+                        <sly-size v-model="state.resizeImageSizes" v-if="state.resizeImage && !state.keepAspectRatio"
+                            :disabled="data.done6"></sly-size>
+                        <sly-field title="Target size:" v-if="state.resizeImage && state.keepAspectRatio"
+                                description="The size of longer edge of image, the second edge will be calculated to preserve the aspect ratio">
+                            <el-input-number v-model="state.targetImageSize" :min="1" :disabled="data.done6"></el-input-number>
+                        </sly-field>
+                        <el-checkbox v-model="state.keepAspectRatio" v-if="state.resizeImage" :disabled="data.done6">Keep aspect ratio</el-checkbox>
+                    </div>
+                
             </div>
             <sly-field title="Checkpoints" description="Checkpoints parameters"
                        style="margin-bottom: 10px; margin-top: 20px;">

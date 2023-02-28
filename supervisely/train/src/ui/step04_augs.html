@@ -117,7 +117,7 @@
         </div>
         <el-button type="warning" class="regular mt10" :plain="true"
                    @click="state.restartFrom = 4;"
-                   v-if="data.done4">
+                   v-if="data.done4 && !state.started">
             <i class="zmdi zmdi-rotate-left mr5"></i> Select other augs
         </el-button>
     </div>
