@@ -104,7 +104,7 @@
                         <sly-size v-model="state.resizeImageSizes" v-if="state.resizeImage && !state.keepAspectRatio"
                             :disabled="data.done6"></sly-size>
                         <sly-field title="Target size:" v-if="state.resizeImage && state.keepAspectRatio"
-                                description="The size of the longer edge of the image, the second edge will be calculated to preserve the aspect ratio">
+                                description="The size of longer edge of image, the second edge will be calculated to preserve the aspect ratio">
                             <el-input-number v-model="state.targetImageSize" :min="1" :disabled="data.done6"></el-input-number>
                         </sly-field>
                         <el-checkbox v-model="state.keepAspectRatio" v-if="state.resizeImage" :disabled="data.done6">Keep aspect ratio</el-checkbox>

@@ -230,7 +230,7 @@ def do_test(cfg, model, current_iter):
         # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
         #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
 
-        test_mapper = functools.partial(f.mapper, augment=False)
+        test_mapper = functools.partial(f.mapper, augment=False, replace_size=False)
         data_loader = build_detection_test_loader(cfg, dataset_name, mapper=test_mapper)
         evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
@@ -312,12 +312,7 @@ def do_train(cfg, resume=False):
         # compared to "train_net.py", we do not support accurate timing and
         # precise BN here, because they are not trivial to implement in a small training loop
 
-        sly.logger.debug(f"g.augs_config_path: {g.augs_config_path}\ng.resize_dimensions: {g.resize_dimensions}")
-        if g.augs_config_path is not None or g.resize_dimensions is not None:
-            data_loader = build_detection_train_loader(cfg,  # AUGMENTATIONS HERE
-                                                       mapper=f.mapper)
-        else:
-            data_loader = build_detection_train_loader(cfg)
+        data_loader = build_detection_train_loader(cfg, mapper=f.mapper)
 
         logger.info("training from iteration {}".format(start_iter))
         with EventStorage(start_iter) as storage:

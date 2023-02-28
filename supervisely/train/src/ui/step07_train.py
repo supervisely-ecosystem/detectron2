@@ -357,6 +357,7 @@ def load_supervisely_parameters(cfg, state):
         })
     else:
         cfg.INPUT.MASK_FORMAT = 'bitmask'
+        cfg.INPUT.FORMAT = 'BGR'
 
         cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
         cfg.SAVE_BEST_MODEL = state['checkpointSaveBest']
@@ -377,6 +378,8 @@ def save_config_locally(cfg, config_path):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         clear_config = step05_models.remove_not_scalars_dict(cfg)
+        if g.resize_transform:
+            clear_config["inference_resize_transform"] = serialize_resize_transform(g.resize_transform)
 
         with open(output_path, 'w') as file:
             json.dump(clear_config, fp=file, indent=4)
@@ -384,6 +387,11 @@ def save_config_locally(cfg, config_path):
     else:
         output_path = os.path.join(cfg.OUTPUT_DIR, 'model_config.yaml')
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        if g.resize_transform:
+            d: dict = serialize_resize_transform(g.resize_transform)
+            d = {"inference_resize_transform": d}
+            node = CfgNode(d)
+            cfg.merge_from_other_cfg(node)
         with open(output_path, 'w') as outfile:
             yaml.dump(cfg, outfile, default_flow_style=False)
 
@@ -402,6 +410,7 @@ def configure_trainer(state):
 
 
 def get_resize_transform(cfg):
+    # Now is used at visualization. Actually it can be used as a general resizing pipeline.
     try:
         if g.resize_dimensions:
             if g.resize_dimensions.get("target_size"):
@@ -428,6 +437,30 @@ def get_resize_transform(cfg):
     return resize_transform
 
 
+def serialize_resize_transform(resize_transform):
+    res = {}
+    if isinstance(resize_transform, ResizeShortestEdge):
+        res['class'] = "ResizeShortestEdge"
+        res['params'] = {"short_edge_length": resize_transform.short_edge_length, "max_size": resize_transform.max_size}
+    elif isinstance(resize_transform, Resize):
+        res['class'] = "Resize"
+        res['params'] = {"shape": resize_transform.shape}
+    else:
+        raise Exception(f"Unexpected class of 'resize_transform': {type(resize_transform)}. Can't serialize it.")
+    return res
+
+
+def deserialize_resize_transform(resize_transform: dict):
+    cls = resize_transform['class']
+    if cls == "ResizeShortestEdge":
+        res = ResizeShortestEdge(**resize_transform['params'])
+    elif cls == "Resize":
+        res = Resize(**resize_transform['params'])
+    else:
+        raise Exception(f"Unexpected class of 'resize_transform': {cls}. Can't deserialize it.")
+    return res
+
+
 @g.my_app.callback("update_train_cycle")
 @sly.update_fields
 @sly.timeit
@@ -441,6 +474,7 @@ def update_train_cycle(api: sly.Api, task_id, context, state, app_logger, fields
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
 def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
+    print("### preview_by_epoch")
     if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
         # fields_to_update['state.followLastPrediction'] = False
 
@@ -492,20 +526,20 @@ def train(api: sly.Api, task_id, context, state, app_logger):
                 if os.path.isfile(path):
                     os.remove(path)
 
+        g.resize_transform = get_resize_transform(cfg)
+        d = serialize_resize_transform(g.resize_transform)
+        r = deserialize_resize_transform(d)
+        
         save_config_locally(cfg, config_path)
-        sly.logger.debug(config_path)
-        sly.logger.debug(cfg)
-
+        
         # TRAIN HERE
         # --------
 
         if config_path.endswith('.py') or config_path.endswith('.json'):
             sly.logger.debug("training with .py config")
-            g.resize_transform = get_resize_transform(cfg)
             sly_plain_train_python_based.do_train(cfg=cfg)
         else:
             sly.logger.debug("training with .yaml config")
-            g.resize_transform = get_resize_transform(cfg)
             sly_plain_train_yaml_based.do_train(cfg=cfg)
 
         # # --------

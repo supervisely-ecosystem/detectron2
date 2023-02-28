@@ -313,10 +313,7 @@ def do_train(cfg, resume=False):
         # precise BN here, because they are not trivial to implement in a small training loop
 
         cfg.dataloader.train.mapper = f.mapper
-
-        sly.logger.debug(f"g.augs_config_path: {g.augs_config_path}\ng.resize_dimensions: {g.resize_dimensions}")
-        if g.augs_config_path is not None or g.resize_dimensions is not None:
-            cfg.dataloader.test.mapper = functools.partial(f.mapper, augment=False)
+        cfg.dataloader.test.mapper = functools.partial(f.mapper, augment=False, replace_size=False)
 
         data_loader = instantiate(cfg.dataloader.train)
 
