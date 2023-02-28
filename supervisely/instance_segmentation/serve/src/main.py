@@ -20,7 +20,8 @@ from detectron2.modeling import build_model
 root_source_path = str(Path(__file__).parents[4])
 app_source_path = str(Path(__file__).parents[1])
 
-load_dotenv(os.path.join(app_source_path, "local.env"))
+# load_dotenv(os.path.join(app_source_path, "local.env"))
+load_dotenv(os.path.join(app_source_path, "local-custom.env"))
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 
 api = sly.Api()
@@ -93,14 +94,22 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         try:
             if config_path.endswith('.py') or config_path.endswith('.json'):
                 if model_weights_option == "custom":
-                    self.resize_transform = deserialize_resize_transform(config_dict["inference_resize_transform"])
+                    if config_dict.get("inference_resize_transform"):
+                        self.resize_transform = deserialize_resize_transform(config_dict["inference_resize_transform"])
+                    else:
+                        self.resize_transform = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
                     self.input_format = "BGR"
                 else:
                     self.resize_transform = instantiate(cfg.dataloader['test']['mapper']['augmentations'][0])
                     self.input_format = instantiate(cfg.dataloader['test']['mapper']['image_format'])
             else:
                 if model_weights_option == "custom":
-                    self.resize_transform = deserialize_resize_transform(dict(cfg.inference_resize_transform))
+                    if hasattr(cfg, "inference_resize_transform"):
+                        self.resize_transform = deserialize_resize_transform(dict(cfg.inference_resize_transform))
+                    else:
+                        self.resize_transform = ResizeShortestEdge(
+                            [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+                        )
                     self.input_format = "BGR"
                 else:
                     self.resize_transform = ResizeShortestEdge(

@@ -26,6 +26,7 @@ import os
 from collections import OrderedDict
 import time
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import torch
@@ -226,18 +227,10 @@ def do_test(cfg, model, current_iter):
 
     dataset_name = cfg.dataloader.test.dataset.names
     output_folder = os.path.join(cfg.train.output_dir, "inference", dataset_name)
-    print(f"{output_folder=}")
 
-    # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
-    #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
-
-    print(f"{cfg.dataloader.test=}")
     data_loader = instantiate(cfg.dataloader.test)
     evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
-    # evaluator = get_evaluator(
-    #     cfg, dataset_name,
-    # )
     results_i = inference_on_dataset(model, data_loader, evaluator)
     results[dataset_name] = results_i
     if comm.is_main_process():
@@ -246,9 +239,8 @@ def do_test(cfg, model, current_iter):
 
     if len(results) == 1:
         results = list(results.values())[0]
-        print(f'{results=}')
-        segm_res = dict(dict(results).get('segm',
-                                          {}))  # contain keys: ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'AP-kiwi', 'AP-lemon', 'AP-__bg__']
+        segm_res = dict(dict(results).get('segm', {}))
+        # contain keys: ['AP', 'AP50', 'AP75', 'APs', 'APm', 'APl', 'AP-kiwi', 'AP-lemon', 'AP-__bg__']
 
         # updating SLY charts
         g.sly_charts['val_ap'].append(x=current_iter, y=round((segm_res.get('AP', 0) / 100), 3),
@@ -266,7 +258,7 @@ def do_test(cfg, model, current_iter):
         g.metrics_for_each_epoch[current_iter] = segm_res
         g.metrics_for_each_epoch[-1] = segm_res
 
-        print(g.metrics_for_each_epoch)
+        g.metrics_for_each_epoch
 
     return results
 
@@ -292,6 +284,8 @@ def do_train(cfg, resume=False):
         'segm_AP': 0,
         'iter': 0
     }
+
+    thread_pool = ThreadPoolExecutor(2)  # for writers
 
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
@@ -322,6 +316,7 @@ def do_train(cfg, resume=False):
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
 
                 if f.control_training_cycle() == 'stop':
+                    checkpointer.save("last_saved_model")
                     return 0
 
                 start_iter = iteration
@@ -375,7 +370,10 @@ def do_train(cfg, resume=False):
                 if iteration % 10 == 0 or iteration == max_iter - 1:
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
-                        writer.write()
+                        if isinstance(writer, SuperviselyMetricPrinter):
+                            ft = thread_pool.submit(writer.write)
+                        else:
+                            writer.write()
                 
                 periodic_checkpointer.step(iteration)
 

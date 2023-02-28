@@ -11,6 +11,7 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 from supervisely.app.v1.widgets.compare_gallery import CompareGallery
 import sly_globals as g
 import sly_functions as f
+import supervisely as sly
 
 
 def preview_predictions(gt_image, pred_image):
@@ -79,7 +80,6 @@ def append_gallery(gt_image, pred_image):
 
 
 def update_metrics_table_by_by_index(index):
-    print("update_metrics_table_by_by_index(), index =", index)
     current_results = g.metrics_for_each_epoch[index]
 
     table_to_upload = []
@@ -111,11 +111,7 @@ def get_visualizer(im, dataset_meta, scale=1.0):
 
 
 def visualize_results(test_dataset_name, model):
-    print("Enter in visualize_results...")
-    # checkpointer = DetectionCheckpointer(model, save_dir=cfg.train.output_dir)
-    # checkpointer.save("last_saved_model")  # save to output/last_saved_model.pth
-    # cfg.train.init_checkpoint = os.path.join(cfg.train.output_dir, "last_saved_model.pth")  # path to the model we just trained
-    # DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
+    sly.logger.debug("Enter in visualize_results...")
 
     model.eval()
     test_ds = DatasetCatalog.get(test_dataset_name)
@@ -130,23 +126,20 @@ def visualize_results(test_dataset_name, model):
     input = torch.as_tensor(input.astype("float32").transpose(2, 0, 1))
     input = {"image": input, "height": height, "width": width}
 
-    print("model forward...")
+    sly.logger.debug("model forward...")
     with torch.no_grad():
         outputs = model([input])
-    print("model forward done!")
+    sly.logger.debug("model forward done!")
 
     scale = calc_scale(im)
-    print(f"{scale=}")
 
     gt_vis = get_visualizer(im, test_metadata, scale=scale)
     out_t = gt_vis.draw_dataset_dict(d)
     output_image_truth = out_t.get_image()[:, :, ::-1]
-    print("GT drawn:", output_image_truth.shape)
 
     pred_vis = get_visualizer(im, test_metadata, scale=scale)
     out_p = pred_vis.draw_instance_predictions(outputs[0]["instances"].to("cpu"))
     output_image_pred = out_p.get_image()[:, :, ::-1]
-    print("Pred drawn:", output_image_pred.shape)
 
     output_image_truth = cv2.cvtColor(output_image_truth, cv2.COLOR_BGR2RGB)
     output_image_pred = cv2.cvtColor(output_image_pred, cv2.COLOR_BGR2RGB)

@@ -315,16 +315,11 @@ def control_training_cycle():
 
 
 def save_best_model(checkpointer, best_model_info, results, iter):
-    # print(results)
     if len(results) == 2:
-        # results = list(results.values())[0]
         segm_res = dict(dict(results).get('segm', {}))
 
         prev_ap = best_model_info.get('segm_AP')
         actual_ap = segm_res.get('AP', 0)
-
-        # print(f'actial_ap: {actual_ap}\n'
-        #       f'prev_ap: {prev_ap}')
 
         if actual_ap > prev_ap:
             best_model_info['segm_AP'] = actual_ap

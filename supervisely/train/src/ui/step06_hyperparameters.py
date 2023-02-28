@@ -14,9 +14,9 @@ def load_default_basic_config(state):
     state["numWorkers"] = 4  # 0 - for debug
 
     state["lr"] = 0.00025
-    state["iters"] = 300
+    state["iters"] = 500
     state["gpusId"] = '0'
-    state['evalInterval'] = 10
+    state['evalInterval'] = 100
 
     state["resizeImage"] = True
     state["keepAspectRatio"] = True

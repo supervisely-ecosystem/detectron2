@@ -410,7 +410,7 @@ def configure_trainer(state):
 
 
 def get_resize_transform(cfg):
-    # Now is used at visualization. Actually it can be used as a general resizing pipeline.
+    # Used at visualization and further inference in serving
     try:
         if g.resize_dimensions:
             if g.resize_dimensions.get("target_size"):
@@ -433,7 +433,7 @@ def get_resize_transform(cfg):
         sly.logger.warn(f"Can't read resize_transform from config: {exc}."
                         " Using detectron2 defautls: size_min=800, size_max=1333.")
         resize_transform = ResizeShortestEdge([800, 800], 1333)
-    print("resize_transform:", type(resize_transform), resize_transform.__dict__)
+    sly.logger.debug("resize_transform:", type(resize_transform), resize_transform.__dict__)
     return resize_transform
 
 
@@ -474,14 +474,12 @@ def update_train_cycle(api: sly.Api, task_id, context, state, app_logger, fields
 @sly.timeit
 @g.my_app.ignore_errors_and_show_dialog_window()
 def preview_by_epoch(api: sly.Api, task_id, context, state, app_logger, fields_to_update):
-    print("### preview_by_epoch")
     if len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')) > 0:
         # fields_to_update['state.followLastPrediction'] = False
 
         index = int(state['currEpochPreview'] / state["evalInterval"])
 
-        print(f'{state["evalInterval"]=}, {index=}, {state["currEpochPreview"]=}, {state["followLastPrediction"]=}')
-        print("preview_len =", len(g.api.app.get_field(g.task_id, 'data.previewPredLinks')))
+        sly.logger.debug(f'{state["evalInterval"]=}, {index=}, {state["currEpochPreview"]=}, {state["followLastPrediction"]=}')
 
         gallery_preview = CompareGallery(g.task_id, g.api, f"data.galleryPreview", g.project_meta)
         sly_train_results_visualizer.update_preview_by_index(index, gallery_preview)
@@ -527,9 +525,6 @@ def train(api: sly.Api, task_id, context, state, app_logger):
                     os.remove(path)
 
         g.resize_transform = get_resize_transform(cfg)
-        d = serialize_resize_transform(g.resize_transform)
-        r = deserialize_resize_transform(d)
-        
         save_config_locally(cfg, config_path)
         
         # TRAIN HERE

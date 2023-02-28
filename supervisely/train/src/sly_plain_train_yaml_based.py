@@ -26,10 +26,10 @@ from collections import OrderedDict
 import time
 from typing import Optional
 import functools
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import torch
-from detectron2.utils.visualizer import Visualizer
 
 from torch.nn.parallel import DistributedDataParallel
 
@@ -227,17 +227,11 @@ def do_test(cfg, model, current_iter):
 
     for dataset_name in cfg.DATASETS.TEST:
         output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
-        # if os.path.isfile(f"{output_folder}/{dataset_name}_coco_format.json"):
-        #     os.remove(f"{output_folder}/{dataset_name}_coco_format.json")
 
         test_mapper = functools.partial(f.mapper, augment=False, replace_size=False)
         data_loader = build_detection_test_loader(cfg, dataset_name, mapper=test_mapper)
         evaluator = COCOEvaluator(dataset_name, output_dir=output_folder)
 
-        #
-        # evaluator = get_evaluator(
-        #     cfg, dataset_name,
-        # )
         results_i = inference_on_dataset(model, data_loader, evaluator)
         results[dataset_name] = results_i
         if comm.is_main_process():
@@ -279,9 +273,6 @@ def do_train(cfg, resume=False):
         model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
     )
     checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume)
-    # start_iter = (
-    #         checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume).get("iteration", -1) + 1
-    # )
 
     start_iter = 0
     max_iter = cfg.SOLVER.MAX_ITER + 1
@@ -290,6 +281,8 @@ def do_train(cfg, resume=False):
         'segm_AP': 0,
         'iter': 0
     }
+
+    thread_pool = ThreadPoolExecutor(2)  # for writers
 
     while not g.training_controllers['stop']:
         if f.control_training_cycle() == 'continue':
@@ -318,6 +311,7 @@ def do_train(cfg, resume=False):
         with EventStorage(start_iter) as storage:
             for data, iteration in zip(data_loader, range(start_iter, max_iter)):
                 if f.control_training_cycle() == 'stop':
+                    checkpointer.save("last_saved_model")
                     return 0
 
                 start_iter = iteration
@@ -366,7 +360,10 @@ def do_train(cfg, resume=False):
                 if iteration % 10 == 0 or iteration == max_iter - 1:
                     sly.logger.debug(f"{iteration}. writers write...")
                     for writer in writers:
-                        writer.write()
+                        if isinstance(writer, SuperviselyMetricPrinter):
+                            ft = thread_pool.submit(writer.write)
+                        else:
+                            writer.write()
                 
                 periodic_checkpointer.step(iteration)
 
