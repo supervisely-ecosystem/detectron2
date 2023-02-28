@@ -13,7 +13,6 @@ import supervisely as sly
 import sly_globals as g
 
 from detectron2.config import get_cfg, LazyConfig
-from detectron2.config import get_cfg
 from detectron2.data import detection_utils as utils
 import imgaug.augmenters as iaa
 import torch
