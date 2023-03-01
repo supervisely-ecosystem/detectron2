@@ -20,8 +20,8 @@ from detectron2.modeling import build_model
 root_source_path = str(Path(__file__).parents[4])
 app_source_path = str(Path(__file__).parents[1])
 
-# load_dotenv(os.path.join(app_source_path, "local.env"))
-load_dotenv(os.path.join(app_source_path, "local-custom.env"))
+load_dotenv(os.path.join(app_source_path, "local.env"))
+# load_dotenv(os.path.join(app_source_path, "local-custom.env"))
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 
 api = sly.Api()
