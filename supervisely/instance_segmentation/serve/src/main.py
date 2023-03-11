@@ -65,7 +65,7 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
                     remote_config_path = temp_config_path
                     break
             
-            if config_path is None:
+            if remote_config_path is None:
                 raise FileNotFoundError("Config with name 'model_config' ('.yaml', '.json' or '.py') not found in model weights directory.")
 
             weights_path = self.download(custom_weights)
