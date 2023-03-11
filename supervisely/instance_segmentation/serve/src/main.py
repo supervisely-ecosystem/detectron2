@@ -49,17 +49,30 @@ def update_config_by_custom(cfg, updates):
 class Detectron2Model(sly.nn.inference.InstanceSegmentation):
     def load_on_device(
         self,
+        model_dir,
         device: Literal["cpu", "cuda", "cuda:0", "cuda:1", "cuda:2", "cuda:3"] = "cpu",
     ):
         config_path = None
         weights_path = None
 
-        # get model and config paths
+        # download and get model and config paths
         if model_weights_option == "custom":
-            weights_path = self.location[0]
-            config_path = self.location[1]
+            custom_model_dir = os.path.dirname(custom_weights)
+            remote_config_path = None
+            for file_extension in ['.yaml', '.json', '.py']:
+                temp_config_path = os.path.join(custom_model_dir, f'model_config{file_extension}')
+                if api.file.exists(sly.env.team_id(), temp_config_path):
+                    remote_config_path = temp_config_path
+                    break
+            
+            if config_path is None:
+                raise FileNotFoundError("Config with name 'model_config' ('.yaml', '.json' or '.py') not found in model weights directory.")
+
+            weights_path = self.download(custom_weights)
+            config_path = self.download(remote_config_path)
         elif model_weights_option == "pretrained":
-            weights_path = self.location
+            weights_url = selected_model_dict.get('weightsUrl')
+            weights_path = self.download(weights_url)
             config_path = os.path.join(models_configs_dir, selected_model_dict.get('config'))
 
         # load config
@@ -183,7 +196,6 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         info["checkpoint_name"] = checkpoint_name
         info["pretrained_on_dataset"] = selected_pretrained_dataset if model_weights_option == "pretrained" else "custom"
         info["device"] = device
-        info["sliding_window_support"] = self.sliding_window_mode
         return info
 
     def predict(
@@ -238,29 +250,13 @@ sly.logger.info("Script arguments", extra={
 
 print("Using device:", device)
 
-if model_weights_option == "custom":
-    model_dir = os.path.dirname(custom_weights)
-    config_path = None
-    for file_extension in ['.yaml', '.json', '.py']:
-        temp_config_path = os.path.join(model_dir, f'model_config{file_extension}')
-        if api.file.exists(sly.env.team_id(), temp_config_path):
-            config_path = temp_config_path
-            break
-    
-    if config_path is None:
-        raise FileNotFoundError("Config with name 'model_config' ('.yaml', '.json' or '.py') not found in model weights directory.")
-    location = [
-        custom_weights,
-        config_path
-    ]
-elif model_weights_option == "pretrained":
-    location = selected_model_dict.get('weightsUrl')
+model_dir = os.path.join(sly.app.get_data_dir(), "models_data")
 
 m = Detectron2Model(
-    location=location, 
+    model_dir=model_dir, 
     custom_inference_settings=os.path.join(app_source_path, "custom_settings.yaml"),
 )
-m.load_on_device(device)
+m.load_on_device(model_dir, device)
 
 if sly.is_production():
     # this code block is running on Supervisely platform in production
@@ -268,7 +264,6 @@ if sly.is_production():
     m.serve()
 else:
     # for local development and debugging
-    # TODO: add image
     image_path = "./demo/image_01.jpg"
     results = m.predict(image_path, settings={})
     vis_path = "./demo/image_01_prediction.jpg"
