@@ -27,5 +27,8 @@
     "context_root": "Neural Networks"
   },
   "poster": "https://imgur.com/T7nLLdH.png",
-  "community_agent": false
+  "community_agent": false,
+  "license": {
+    "type": "Apache-2.0" 
+  }
 }
