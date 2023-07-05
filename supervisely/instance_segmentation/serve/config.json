@@ -252,7 +252,7 @@
     ]
   },
   "task_location": "application_sessions",
-  "icon": "https://imgur.com/PumnReg.png",
+  "icon": "supervisely/instance_segmentation/serve/media/icon.png",
   "icon_background": "#FFFFFF",
   "icon_cover": false,
   "isolate": true,
@@ -261,7 +261,7 @@
   "session_tags": [
     "deployed_nn"
   ],
-  "poster": "https://imgur.com/jIOW3zu.png",
+  "poster": "supervisely/instance_segmentation/serve/media/poster.png",
   "community_agent": false,
   "license": {
     "type": "Apache-2.0" 
