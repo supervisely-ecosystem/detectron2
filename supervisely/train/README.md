@@ -1,7 +1,7 @@
 
 <div align="center" markdown>
 
-<img src="supervisely/train/media/poster.png"/>  
+<img src="media/poster.png"/>  
 
 # Train Detectron2 (Instance Segmentation)
 
@@ -102,21 +102,21 @@ We have integrated popular architectures into this application.
 # How to Run
 
 ### 1. Add [Train Detectron2](https://ecosystem.supervise.ly/apps/supervisely-ecosystem/detectron2/supervisely/train) to your team
-<img data-key="sly-module-link" data-module-slug="supervisely-ecosystem/detectron2/supervisely/train" src="supervisely/train/media/htr1.png" width="350px" style='padding-bottom: 10px'/>
+<img data-key="sly-module-link" data-module-slug="supervisely-ecosystem/detectron2/supervisely/train" src="media/htr1.png" width="350px" style='padding-bottom: 10px'/>
 
 ### 2. Run application from [labeled using [Bitmaps, Polygons] project](https://ecosystem.supervise.ly/projects/lemons-annotated)
-<img src="supervisely/train/media/htr2.png" width="80%" style='padding-top: 10px'>  
+<img src="media/htr2.png" width="80%" style='padding-top: 10px'>  
 
 
 # Demo
 
 <a data-key="sly-embeded-video-link" href="https://youtu.be/Uzpp7_xhbPQ" data-video-code="Uzpp7_xhbPQ">
-    <img src="supervisely/train/media/demo.jpeg" alt="SLY_EMBEDED_VIDEO_LINK"  style="max-width:80%;">
+    <img src="media/demo.jpeg" alt="SLY_EMBEDED_VIDEO_LINK"  style="max-width:80%;">
 </a>
 
 # Screenshot
 
-<img src="supervisely/train/media/s1.png" width="100%" style='padding-top: 10px'>
+<img src="media/s1.png" width="100%" style='padding-top: 10px'>
 
 # Acknowledgment
 
