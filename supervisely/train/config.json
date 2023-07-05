@@ -15,7 +15,7 @@
   "main_script": "supervisely/train/src/sly_train.py",
   "gui_template": "supervisely/train/src/gui.html",
   "task_location": "workspace_tasks",
-  "icon": "supervisely/train/media/icon.png",
+  "icon": "icon.png",
   "icon_background": "#FFFFFF",
   "icon_cover": false,
   "isolate": true,
@@ -26,7 +26,7 @@
     ],
     "context_root": "Neural Networks"
   },
-  "poster": "supervisely/train/media/poster.png",
+  "poster": "poster.png",
   "community_agent": false,
   "license": {
     "type": "Apache-2.0" 
