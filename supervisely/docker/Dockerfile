@@ -1,4 +1,4 @@
-FROM supervisely/FROM supervisely/base-py:6.1.7
+FROM supervisely/base-py:6.1.7
 
 
 # Install PyTorch
