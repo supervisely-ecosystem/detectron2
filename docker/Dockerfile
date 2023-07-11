@@ -35,9 +35,6 @@ ENV TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
 
 RUN pip install --user -e detectron2_repo
 
-COPY dev_requirements.txt dev_requirements.txt
-RUN pip install -r dev_requirements.txt
-
 # Set a fixed model cache directory.
 ENV FVCORE_CACHE="/tmp"
 WORKDIR /home/appuser/detectron2_repo
