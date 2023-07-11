@@ -1,5 +1,4 @@
-# FROM supervisely/base-pytorch:6.0.22
-FROM supervisely/detectron2:1.0.2
+FROM supervisely/base-pytorch:6.0.22
 
 
 # Install PyTorch
