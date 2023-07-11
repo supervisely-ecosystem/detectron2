@@ -6,7 +6,8 @@ RUN pip3 install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.
 
 
 # Install other packages
-
+COPY dev_requirements.txt dev_requirements.txt
+RUN pip install -r dev_requirements.txt
 
 # DETECTRON 2 for CUDA 11.3 and TORCH 1.10
 
