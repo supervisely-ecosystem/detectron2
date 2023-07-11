@@ -10,7 +10,6 @@ COPY dev_requirements.txt dev_requirements.txt
 RUN pip install -r dev_requirements.txt
 
 # DETECTRON 2 for CUDA 11.3 and TORCH 1.10
-
 RUN pip install detectron2 -f \
   https://dl.fbaipublicfiles.com/detectron2/wheels/cu113/torch1.10/index.html
 
