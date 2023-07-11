@@ -1,8 +1,9 @@
-FROM supervisely/base-pytorch:6.0.22
+# FROM supervisely/base-pytorch:6.0.22
+FROM supervisely/detectron2:1.0.2
 
 
 # Install PyTorch
-RUN pip3 install -U torch==1.10.0+cu111 torchvision==0.11.0+cu111 torchaudio==0.10.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html
+# RUN pip3 install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
 # Install other packages
 COPY dev_requirements.txt dev_requirements.txt
