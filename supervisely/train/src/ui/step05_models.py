@@ -164,9 +164,10 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
             download_sly_file(weights_path_remote, g.local_weights_path, progress)
             download_custom_config(state)
 
-            with open(g.model_config_local_path, 'r') as file:
-                fields_to_update['state.modelId'] = json.load(file).get('model_id')
-
+            if g.model_config_local_path.endswith('.json'):
+                sly.logger.debug(f"Founded json config: {g.model_config_local_path}")
+                with open(g.model_config_local_path, 'r') as file:
+                    fields_to_update['state.modelId'] = json.load(file).get('model_id')
         else:
             # get_pretrained_models()[state['pretrainedDataset']][]
             models_by_dataset = f.get_pretrained_models()[state["pretrainedDataset"]]
