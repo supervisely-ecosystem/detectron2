@@ -256,7 +256,8 @@
   "icon_background": "#FFFFFF",
   "icon_cover": false,
   "isolate": true,
-  "need_gpu": true,
+  "need_gpu": false,
+  "gpu": "preferred",
   "headless": true,
   "session_tags": [
     "deployed_nn"
