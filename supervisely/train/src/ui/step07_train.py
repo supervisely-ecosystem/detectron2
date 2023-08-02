@@ -441,7 +441,7 @@ def get_resize_transform(cfg):
         sly.logger.warn(f"Can't read resize_transform from config: {exc}."
                         " Using detectron2 defautls: size_min=800, size_max=1333.")
         resize_transform = ResizeShortestEdge([800, 800], 1333)
-    sly.logger.debug("resize_transform:", type(resize_transform), resize_transform.__dict__)
+    sly.logger.debug(f"resize_transform: {type(resize_transform)}; {resize_transform.__dict__}")
     return resize_transform
 
 
