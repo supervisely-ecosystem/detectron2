@@ -190,6 +190,11 @@ def convert_data_to_detectron(project_seg_dir_path, set_path):
 
     files_by_datasets = get_items_by_set_path(set_path=set_path)
 
+    # logging:
+    items_in_split = {ds_name : len(items) for ds_name, items in files_by_datasets.items()}
+    sly.logger.debug(f"items in {set_path} split:", extra=items_in_split)
+
+    labels_count = 0
     datasets_list = project.datasets
     for current_dataset in datasets_list:
         current_dataset_name = current_dataset.name
@@ -213,8 +218,11 @@ def convert_data_to_detectron(project_seg_dir_path, set_path):
             record["annotations"] = f.get_objects_on_image(ann, g.all_classes)
             record["sly_annotations"] = ann
 
+            labels_count += len(record["annotations"])
+
             dataset_dicts.append(record)
 
+    sly.logger.debug(f"labels_count in {set_path} split = {labels_count}.")
     return dataset_dicts
 
 
@@ -501,6 +509,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             classes_json = [current_class for current_class in classes_json if current_class['title'] != '__bg__']
             sly.json.dump_json_file(classes_json, model_classes_path)
             g.need_convert_to_sly = False
+            sly.logger.debug(f"project_seg has {project_seg.total_items} items in {len(project_seg.datasets)} datasets.")
         else:
             project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
 
