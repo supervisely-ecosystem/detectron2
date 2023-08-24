@@ -1,3 +1,0 @@
-supervisely==6.72.67
-ffmpeg-python==0.2.0
-
