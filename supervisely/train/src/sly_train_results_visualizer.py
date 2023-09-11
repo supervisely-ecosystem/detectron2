@@ -80,7 +80,7 @@ def append_gallery(gt_image, pred_image):
 
 
 def update_metrics_table_by_by_index(index):
-    current_results = g.metrics_for_each_epoch[index]
+    current_results = g.metrics_for_each_epoch.get(index, {})
 
     table_to_upload = []
     for class_name, AP in current_results.items():
