@@ -34,6 +34,12 @@ load_dotenv(secret_debug_env_path)
 load_dotenv(debug_env_path)
 
 my_app = AppService()
+
+my_app.logger.warn("NEXT INFO IS CRUTIAL")
+my_app.logger.info(f"os.environ.get(DEBUG_APP_DIR, None) = {os.environ.get('DEBUG_APP_DIR', None)}")
+my_app.logger.info(f"my_app session dir: {my_app._session_dir}")
+
+os.environ.get("DEBUG_APP_DIR", "")
 api = my_app.public_api
 task_id = my_app.task_id
 
