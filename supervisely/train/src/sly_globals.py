@@ -27,11 +27,12 @@ print(f"Models configs directory: {models_configs_dir}")
 sys.path.append(source_path)
 
 # only for convenient debug
-debug_env_path = os.path.join(root_source_dir, "supervisely/train", "debug.env")
-secret_debug_env_path = os.path.join(root_source_dir, "supervisely/train", "secret_debug.env")
-load_dotenv(os.path.expanduser("~/supervisely.env"))
-load_dotenv(secret_debug_env_path)
-load_dotenv(debug_env_path)
+if not sly.is_production():
+    debug_env_path = os.path.join(root_source_dir, "supervisely/train", "debug.env")
+    secret_debug_env_path = os.path.join(root_source_dir, "supervisely/train", "secret_debug.env")
+    load_dotenv(os.path.expanduser("~/supervisely.env"))
+    load_dotenv(secret_debug_env_path)
+    load_dotenv(debug_env_path)
 
 my_app = AppService()
 
