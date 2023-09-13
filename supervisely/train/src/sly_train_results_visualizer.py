@@ -92,6 +92,8 @@ def update_metrics_table_by_by_index(index):
         except:
             continue
 
+    sly.logger.info(f"table_to_upload: {table_to_upload}")
+
     g.api.app.set_field(g.task_id, 'data.metricsTable', table_to_upload)
 
 
