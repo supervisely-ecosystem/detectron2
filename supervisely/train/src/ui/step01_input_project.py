@@ -30,7 +30,7 @@ def init(data, state):
 def download(api: sly.Api, task_id, context, state, app_logger):
     try:
         if sly.fs.dir_exists(g.project_dir):
-            pass
+            sly.fs.remove_dir(g.project_dir)
         else:
             sly.fs.mkdir(g.project_dir)
             progress1.set_total(g.project_info.items_count * 2)
