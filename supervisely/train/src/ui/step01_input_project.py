@@ -31,12 +31,11 @@ def download(api: sly.Api, task_id, context, state, app_logger):
     try:
         if sly.fs.dir_exists(g.project_dir):
             sly.fs.remove_dir(g.project_dir)
-        else:
-            sly.fs.mkdir(g.project_dir)
-            progress1.set_total(g.project_info.items_count * 2)
-            sly.download_project(g.api, g.project_id, g.project_dir,
-                                 cache=g.my_app.cache, progress_cb=progress1.increment, save_image_info=True)
-            progress1.reset_and_update()
+        sly.fs.mkdir(g.project_dir)
+        progress1.set_total(g.project_info.items_count * 2)
+        sly.download_project(g.api, g.project_id, g.project_dir,
+                                cache=g.my_app.cache, progress_cb=progress1.increment, save_image_info=True)
+        progress1.reset_and_update()
         global project_fs
         project_fs = sly.Project(g.project_dir, sly.OpenMode.READ)
     except Exception as e:
