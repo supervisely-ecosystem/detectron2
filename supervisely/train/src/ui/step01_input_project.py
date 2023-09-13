@@ -41,7 +41,9 @@ def download(api: sly.Api, task_id, context, state, app_logger):
         project_fs = sly.Project(g.project_dir, sly.OpenMode.READ)
     except Exception as e:
         progress1.reset_and_update()
-        raise e
+        sly.fs.remove_dir(g.project_dir)
+        return
+        # raise e
 
     fields = [
         {"field": "data.done1", "payload": True},
