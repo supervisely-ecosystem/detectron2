@@ -45,7 +45,7 @@ api = my_app.public_api
 task_id = my_app.task_id
 
 # @TODO: for debug
-# sly.fs.clean_dir(my_app.data_dir)
+# sly.fs.clean_dir(sly.app.get_data_dir())
 
 team_id = int(os.environ['context.teamId'])
 workspace_id = int(os.environ['context.workspaceId'])
@@ -55,9 +55,10 @@ project_info = api.project.get_info_by_id(project_id)
 if project_info is None:  # for debug
     raise ValueError(f"Project with id={project_id} not found")
 project_meta = sly.ProjectMeta.from_json(api.project.get_meta(project_id))
-project_dir = os.path.join(my_app.data_dir, "sly_project")
 
-artifacts_dir = os.path.join(my_app.data_dir, "artifacts")
+data_dir = sly.app.get_data_dir()
+project_dir = os.path.join(data_dir, "sly_project")
+artifacts_dir = os.path.join(data_dir, "artifacts")
 info_dir = os.path.join(artifacts_dir, "info")
 sly.fs.mkdir(info_dir)
 checkpoints_dir = os.path.join(artifacts_dir, "checkpoints")

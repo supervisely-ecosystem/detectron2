@@ -120,7 +120,7 @@ def load_existing_pipeline(api: sly.Api, task_id, context, state, app_logger):
     api.task.set_field(task_id, "data.customAugsPy", None)
 
     remote_path = state["customAugsPath"]
-    _custom_pipeline_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(remote_path))
+    _custom_pipeline_path = os.path.join(g.data_dir, sly.fs.get_file_name_with_ext(remote_path))
     api.file.download(g.team_id, remote_path, _custom_pipeline_path)
 
     custom_pipeline, custom_py_preview, custom_config = _load_template(_custom_pipeline_path)
@@ -159,7 +159,7 @@ def preview_augs(api: sly.Api, task_id, context, state, app_logger):
 
     gallery.set_left("before", image_info.path_original, ann)
     _, res_img, res_ann = sly.imgaug_utils.apply(augs_ppl, g.project_meta, img, ann)
-    local_image_path = os.path.join(g.my_app.data_dir, "preview_augs.jpg")
+    local_image_path = os.path.join(g.data_dir, "preview_augs.jpg")
     sly.image.write(local_image_path, res_img)
     if api.file.exists(g.team_id, remote_preview_path):
         api.file.remove(g.team_id, remote_preview_path)
