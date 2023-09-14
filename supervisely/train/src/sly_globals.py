@@ -36,10 +36,6 @@ if not sly.is_production():
 
 my_app = AppService()
 
-my_app.logger.warn("NEXT INFO IS CRUTIAL")
-my_app.logger.info(f"os.environ.get(DEBUG_APP_DIR, None) = {os.environ.get('DEBUG_APP_DIR', None)}")
-my_app.logger.info(f"my_app session dir: {my_app._session_dir}")
-
 os.environ.get("DEBUG_APP_DIR", "")
 api = my_app.public_api
 task_id = my_app.task_id
@@ -56,14 +52,15 @@ if project_info is None:  # for debug
     raise ValueError(f"Project with id={project_id} not found")
 project_meta = sly.ProjectMeta.from_json(api.project.get_meta(project_id))
 
-data_dir = sly.app.get_data_dir()
+data_dir = my_app.data_dir # /app
+artifacts_dir = sly.app.get_data_dir() # /sly-app-data
+# artifacts_dir = os.path.join(data_dir, "artifacts")
+
 project_dir = os.path.join(data_dir, "sly_project")
-artifacts_dir = os.path.join(data_dir, "artifacts")
 info_dir = os.path.join(artifacts_dir, "info")
 sly.fs.mkdir(info_dir)
-checkpoints_dir = os.path.join(artifacts_dir, "checkpoints")
+checkpoints_dir = os.path.join(artifacts_dir, "checkpoints") 
 sly.fs.mkdir(checkpoints_dir, remove_content_if_exists=True)  # remove content for debug, has no effect in production
-my_app.logger.warn("NEXT INFO IS CRUTIAL")
 my_app.logger.info(f"Create local paths: {checkpoints_dir}, {info_dir}")
 visualizations_dir = os.path.join(artifacts_dir, "visualizations")
 sly.fs.mkdir(visualizations_dir, remove_content_if_exists=True)  # remove content for debug, has no effect in production
