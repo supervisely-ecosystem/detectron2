@@ -40,7 +40,7 @@ def update_preview_by_index(index, gallery_preview):
 
 def save_and_upload_image(temp_image, img_type):
     remote_preview_path = "/temp/{}_preview_segmentations.jpg"
-    local_image_path = os.path.join(g.my_app.data_dir, f"{time.time()}_{img_type}.jpg")
+    local_image_path = os.path.join(g.data_dir, f"{time.time()}_{img_type}.jpg")
     g.sly.image.write(local_image_path, temp_image)
     if g.api.file.exists(g.team_id, remote_preview_path.format(img_type)):
         g.api.file.remove(g.team_id, remote_preview_path.format(img_type))

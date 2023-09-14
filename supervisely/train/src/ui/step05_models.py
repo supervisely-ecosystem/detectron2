@@ -106,7 +106,7 @@ def download_custom_config(state):
                                            min_report_percent=5)
 
     detectron_remote_dir = os.path.dirname(state["weightsPath"])
-    g.model_config_local_path = os.path.join(g.my_app.data_dir, 'custom_local_model_config')
+    g.model_config_local_path = os.path.join(g.data_dir, 'custom_local_model_config')
 
     for file_extension in ['.yaml', '.py', '.json']:
         config_remote_dir = os.path.join(detectron_remote_dir, f'model_config{file_extension}')
@@ -157,7 +157,7 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
                 raise ValueError(f"Weights file has unsupported extension {sly.fs.get_file_ext(weights_path_remote)}. "
                                  f"Supported: '.pth'")
 
-            g.local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(weights_path_remote))
+            g.local_weights_path = os.path.join(g.data_dir, sly.fs.get_file_name_with_ext(weights_path_remote))
             if sly.fs.file_exists(g.local_weights_path):
                 os.remove(g.local_weights_path)
 
@@ -179,7 +179,7 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
             weights_url = selected_model.get('weightsUrl')
             if weights_url is not None:
                 # default_pytorch_dir = "/root/.cache/torch/hub/checkpoints/"
-                g.local_weights_path = os.path.join(g.my_app.data_dir, sly.fs.get_file_name_with_ext(weights_url))
+                g.local_weights_path = os.path.join(g.data_dir, sly.fs.get_file_name_with_ext(weights_url))
                 # g.local_weights_path = os.path.join(default_pytorch_dir, sly.fs.get_file_name_with_ext(weights_url))
                 if sly.fs.file_exists(g.local_weights_path) is False:
                     response = requests.head(weights_url, allow_redirects=True)
@@ -191,7 +191,7 @@ def download_weights(api: sly.Api, task_id, context, state, app_logger, fields_t
                 sly.logger.info("Pretrained weights has been successfully downloaded",
                                 extra={"weights": g.local_weights_path})
 
-            g.model_config_local_path = os.path.join(g.my_app.data_dir, 'local_model_config')
+            g.model_config_local_path = os.path.join(g.data_dir, 'local_model_config')
 
         load_advanced_config(state, fields_to_update)
     except Exception as e:

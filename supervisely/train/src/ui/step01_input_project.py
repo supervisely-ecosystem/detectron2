@@ -7,7 +7,7 @@ import sly_globals as g
 
 
 _images_infos = None  # dataset_name -> image_name -> image_info
-_cache_base_filename = os.path.join(g.my_app.data_dir, "images_info")
+_cache_base_filename = os.path.join(g.data_dir, "images_info")
 _cache_path = _cache_base_filename + ".db"
 project_fs: sly.Project = None
 _image_id_to_paths = {}

@@ -27,18 +27,21 @@ print(f"Models configs directory: {models_configs_dir}")
 sys.path.append(source_path)
 
 # only for convenient debug
-debug_env_path = os.path.join(root_source_dir, "supervisely/train", "debug.env")
-secret_debug_env_path = os.path.join(root_source_dir, "supervisely/train", "secret_debug.env")
-load_dotenv(os.path.expanduser("~/supervisely.env"))
-load_dotenv(secret_debug_env_path)
-load_dotenv(debug_env_path)
+if not sly.is_production():
+    debug_env_path = os.path.join(root_source_dir, "supervisely/train", "debug.env")
+    secret_debug_env_path = os.path.join(root_source_dir, "supervisely/train", "secret_debug.env")
+    load_dotenv(os.path.expanduser("~/supervisely.env"))
+    load_dotenv(secret_debug_env_path)
+    load_dotenv(debug_env_path)
 
 my_app = AppService()
+
+os.environ.get("DEBUG_APP_DIR", "")
 api = my_app.public_api
 task_id = my_app.task_id
 
 # @TODO: for debug
-# sly.fs.clean_dir(my_app.data_dir)
+# sly.fs.clean_dir(sly.app.get_data_dir())
 
 team_id = int(os.environ['context.teamId'])
 workspace_id = int(os.environ['context.workspaceId'])
@@ -48,13 +51,17 @@ project_info = api.project.get_info_by_id(project_id)
 if project_info is None:  # for debug
     raise ValueError(f"Project with id={project_id} not found")
 project_meta = sly.ProjectMeta.from_json(api.project.get_meta(project_id))
-project_dir = os.path.join(my_app.data_dir, "sly_project")
 
-artifacts_dir = os.path.join(my_app.data_dir, "artifacts")
+data_dir = my_app.data_dir # /app
+artifacts_dir = sly.app.get_data_dir() # /sly-app-data
+# artifacts_dir = os.path.join(data_dir, "artifacts")
+
+project_dir = os.path.join(data_dir, "sly_project")
 info_dir = os.path.join(artifacts_dir, "info")
 sly.fs.mkdir(info_dir)
-checkpoints_dir = os.path.join(artifacts_dir, "checkpoints")
+checkpoints_dir = os.path.join(artifacts_dir, "checkpoints") 
 sly.fs.mkdir(checkpoints_dir, remove_content_if_exists=True)  # remove content for debug, has no effect in production
+my_app.logger.info(f"Create local paths: {checkpoints_dir}, {info_dir}")
 visualizations_dir = os.path.join(artifacts_dir, "visualizations")
 sly.fs.mkdir(visualizations_dir, remove_content_if_exists=True)  # remove content for debug, has no effect in production
 

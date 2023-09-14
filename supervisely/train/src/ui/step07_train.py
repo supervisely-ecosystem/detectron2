@@ -219,7 +219,7 @@ def convert_data_to_detectron(project_seg_dir_path, set_path):
 
 
 def convert_supervisely_to_segmentation(state):
-    project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
+    project_dir_seg = os.path.join(g.data_dir, g.project_info.name + "_seg")
 
     if sly.fs.dir_exists(project_dir_seg) is False:  # for debug, has no effect in production
         sly.fs.mkdir(project_dir_seg, remove_content_if_exists=True)
@@ -332,7 +332,8 @@ def load_supervisely_parameters(cfg, state):
     if config_path.endswith('.py') or config_path.endswith('.json'):
         cfg['model_id'] = state['modelId']
 
-        cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
+        # cfg.train.output_dir = os.path.join(g.artifacts_dir, 'detectron_data')
+        cfg.train.output_dir = g.checkpoints_dir
         cfg.train.init_checkpoint = g.local_weights_path
         cfg.train['save_best_model'] = state['checkpointSaveBest']
         cfg.train['max_to_keep'] = state['checkpointMaxToKeep']
@@ -359,7 +360,8 @@ def load_supervisely_parameters(cfg, state):
         cfg.INPUT.MASK_FORMAT = 'bitmask'
         cfg.INPUT.FORMAT = 'BGR'
 
-        cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
+        # cfg.OUTPUT_DIR = os.path.join(g.artifacts_dir, 'detectron_data')
+        cfg.OUTPUT_DIR = g.checkpoints_dir
         cfg.SAVE_BEST_MODEL = state['checkpointSaveBest']
         cfg.MAX_TO_KEEP = state['checkpointMaxToKeep']
 
@@ -502,7 +504,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             sly.json.dump_json_file(classes_json, model_classes_path)
             g.need_convert_to_sly = False
         else:
-            project_dir_seg = os.path.join(g.my_app.data_dir, g.project_info.name + "_seg")
+            project_dir_seg = os.path.join(g.data_dir, g.project_info.name + "_seg")
 
         configure_datasets(state, project_dir_seg)
         cfg, config_path = configure_trainer(state)
