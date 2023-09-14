@@ -53,6 +53,7 @@ _darcs
 
 secret_debug.env
 venv
+.venv
 */.venv
 supervisely/instance_segmentation/serve/.venv
 /src/__pycache__

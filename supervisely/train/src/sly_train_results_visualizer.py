@@ -85,6 +85,7 @@ def update_metrics_table_by_by_index(index):
     table_to_upload = []
     for class_name, AP in current_results.items():
         try:
+            AP = None if np.isnan(AP) else AP
             table_to_upload.append({
                 'class name': class_name[3:],
                 'SEG AP [0.5:0.05:0.95] ⬆': AP
