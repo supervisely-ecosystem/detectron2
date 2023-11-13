@@ -53,7 +53,7 @@ if project_info is None:  # for debug
 project_meta = sly.ProjectMeta.from_json(api.project.get_meta(project_id))
 
 data_dir = my_app.data_dir # /app
-artifacts_dir = sly.app.get_data_dir() # /sly-app-data
+artifacts_dir = sly.app.get_synced_data_dir() # /sly-app-data
 # artifacts_dir = os.path.join(data_dir, "artifacts")
 
 project_dir = os.path.join(data_dir, "sly_project")
