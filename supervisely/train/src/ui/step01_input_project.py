@@ -43,7 +43,10 @@ def download(api: sly.Api, task_id, context, state, app_logger):
         sly.fs.remove_dir(g.project_dir)
         return
         # raise e
-
+    if g.my_app.is_stopped():
+        msg = "Something went wrong."
+        g.my_app.show_modal_window(msg, level="error", log_message=False)
+        return
     fields = [
         {"field": "data.done1", "payload": True},
         {"field": "state.collapsed2", "payload": False},
