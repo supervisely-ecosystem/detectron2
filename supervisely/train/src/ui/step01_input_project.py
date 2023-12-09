@@ -44,7 +44,8 @@ def download(api: sly.Api, task_id, context, state, app_logger):
         return
         # raise e
     if g.my_app.is_stopped():
-        msg = "Something went wrong."
+        msg = "Project download error. The application will be stopped."
+        app_logger.error(msg)
         g.my_app.show_modal_window(msg, level="error", log_message=False)
         return
     fields = [
