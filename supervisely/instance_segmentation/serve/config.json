@@ -12,7 +12,7 @@
   ],
   "description": "Deploy model as REST API service",
   "docker_image": "supervisely/detectron2:1.0.5",
-  "instance_version": "6.6.7",
+  "instance_version": "6.8.88",
   "entrypoint": "python -m uvicorn main:m.app --app-dir ./supervisely/instance_segmentation/serve/src --host 0.0.0.0 --port 8000 --ws websockets",
   "port": 8000,
   "modal_template": "supervisely/instance_segmentation/serve/src/modal.html",
@@ -265,6 +265,6 @@
   "poster": "https://imgur.com/jIOW3zu.png",
   "community_agent": false,
   "license": {
-    "type": "Apache-2.0" 
+    "type": "Apache-2.0"
   }
 }
