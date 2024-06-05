@@ -1,4 +1,4 @@
-supervisely==6.73.45
+supervisely==6.73.96
 imagecorruptions==1.1.2
 ffmpeg-python==0.2.0
 protobuf==3.20.3
