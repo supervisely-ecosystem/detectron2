@@ -151,7 +151,7 @@ def upload_artifacts_and_log_progress(experiment_name):
         app_name=g.checkpoint.app_name,
         session_id=g.task_id,
         session_path=remote_artifacts_dir,
-        weights_dir=remote_weights_dir,
+        weights_path=remote_weights_dir,
         training_project_name=experiment_name,
         task_type=g.checkpoint.task_type,
         config_path=remote_config_path,
