@@ -149,11 +149,11 @@ def upload_artifacts_and_log_progress(experiment_name):
     # generate metadata file
     g.sly_det2.generate_metadata(
         app_name=g.sly_det2.app_name,
-        session_id=g.task_id,
-        session_path=remote_artifacts_dir,
-        weights_path=remote_weights_dir,
+        task_id=g.task_id,
+        artifacts_folder=remote_artifacts_dir,
+        weights_folder=remote_weights_dir,
         weights_ext=g.sly_det2.weights_ext,
-        training_project_name=experiment_name,
+        project_name=experiment_name,
         task_type=g.sly_det2.task_type,
         config_path=remote_config_path,
     )
