@@ -140,8 +140,24 @@ def upload_artifacts_and_log_progress(experiment_name):
                                                  is_size=True, min_report_percent=1)
     progress_cb = partial(upload_monitor, api=g.api, task_id=g.task_id, progress=progress_other)
 
-    remote_dir = f"/detectron2/{g.task_id}_{experiment_name}"
-    res_dir = g.api.file.upload_directory(g.team_id, g.artifacts_dir, remote_dir, progress_size_cb=progress_cb)
+    model_dir = g.sly_det2.framework_folder
+    remote_artifacts_dir = f"{model_dir}/{g.task_id}_{experiment_name}"
+    remote_weights_dir = os.path.join(remote_artifacts_dir, g.sly_det2.weights_folder)
+    remote_config_path = os.path.join(remote_weights_dir, g.sly_det2.config_file)
+    res_dir = g.api.file.upload_directory(g.team_id, g.artifacts_dir, remote_artifacts_dir, progress_size_cb=progress_cb)
+    
+    # generate metadata file
+    g.sly_det2.generate_metadata(
+        app_name=g.sly_det2.app_name,
+        task_id=g.task_id,
+        artifacts_folder=remote_artifacts_dir,
+        weights_folder=remote_weights_dir,
+        weights_ext=g.sly_det2.weights_ext,
+        project_name=experiment_name,
+        task_type=g.sly_det2.task_type,
+        config_path=remote_config_path,
+    )
+    
     progress_other.reset_and_update()
     return res_dir
 

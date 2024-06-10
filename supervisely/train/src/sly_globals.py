@@ -4,6 +4,7 @@ import sys
 from dotenv import load_dotenv
 import supervisely as sly
 from supervisely.app.v1.app_service import AppService
+from supervisely.nn.artifacts.detectron2 import Detectron2
 
 
 root_source_dir = str(Path(sys.argv[0]).parents[3])
@@ -46,6 +47,9 @@ task_id = my_app.task_id
 team_id = int(os.environ['context.teamId'])
 workspace_id = int(os.environ['context.workspaceId'])
 project_id = int(os.environ['modal.state.slyProjectId'])
+
+sly_det2 = Detectron2(team_id)
+
 
 project_info = api.project.get_info_by_id(project_id)
 if project_info is None:  # for debug
