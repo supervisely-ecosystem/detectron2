@@ -1,6 +1,12 @@
-git+https://github.com/supervisely/supervisely.git@optimize-checkpoint
+# git+https://github.com/supervisely/supervisely.git@some-test-branch
 
-# supervisely==6.73.96
+supervisely==6.73.100
 imagecorruptions==1.1.2
 ffmpeg-python==0.2.0
 protobuf==3.20.3
+
+# torch>=1.10
+# torchvision>=0.11.1
+# tensorboard
+# ninja
+# g++>=5.4
