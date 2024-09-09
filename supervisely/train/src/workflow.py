@@ -36,6 +36,7 @@ def workflow_input(api: sly.Api, project_info: sly.ProjectInfo, state: dict = No
 
 def workflow_output(api: sly.Api, det2_generated_metadata: dict, state:dict):
     try:
+        sly.logger.debug(f"Workflow Output: det2_generated_metadata <{type(det2_generated_metadata).__name__}>")
         checkpoints_list = det2_generated_metadata.get("checkpoints", [])
         if len(checkpoints_list) == 0:
             sly.logger.debug("Workflow Output: No checkpoints found. Cannot set workflow output.")
@@ -52,6 +53,7 @@ def workflow_output(api: sly.Api, det2_generated_metadata: dict, state:dict):
 
         
         module_id = api.task.get_info_by_id(api.task_id).get("meta", {}).get("app", {}).get("id")
+        sly.logger.debug(f"Workflow Output: Module ID - {module_id}")
         
         if state.get("weightsInitialization", None) == "custom":
             node_custom_title = "Train Custom Model"
