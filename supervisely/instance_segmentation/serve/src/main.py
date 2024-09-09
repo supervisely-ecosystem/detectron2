@@ -15,6 +15,7 @@ from detectron2.config import get_cfg, LazyConfig, instantiate
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.data.transforms import ResizeShortestEdge, Resize
 from detectron2.modeling import build_model 
+import workflow as w
 
 
 root_source_path = str(Path(__file__).parents[4])
@@ -186,6 +187,9 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
             tag_metas=sly.TagMetaCollection([self._get_confidence_tag_meta()])
         )
         print(f"✅ Model has been successfully loaded on {device.upper()} device")
+        if model_weights_option == "custom":
+            w.workflow_input(api, custom_weights)
+
 
     def get_classes(self) -> List[str]:
         return self.class_names  # e.g. ["cat", "dog", ...]

@@ -38,6 +38,7 @@ import step03_classes
 import step04_augs
 import step05_models
 
+import src.workflow as w
 
 _open_lnk_name = "open_app.lnk"
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
@@ -147,7 +148,7 @@ def upload_artifacts_and_log_progress(experiment_name):
     res_dir = g.api.file.upload_directory(g.team_id, g.artifacts_dir, remote_artifacts_dir, progress_size_cb=progress_cb)
     
     # generate metadata file
-    g.sly_det2.generate_metadata(
+    g.sly_det2_generated_metadata = g.sly_det2.generate_metadata(
         app_name=g.sly_det2.app_name,
         task_id=g.task_id,
         artifacts_folder=remote_artifacts_dir,
@@ -563,6 +564,11 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         remote_dir = upload_artifacts_and_log_progress(experiment_name=state["expName"])
         file_info = api.file.get_info_by_path(g.team_id, os.path.join(remote_dir, _open_lnk_name))
         api.task.set_output_directory(task_id, file_info.id, remote_dir)
+
+        # ----------------------------------------- Add Workflow ----------------------------------------- #
+        w.workflow_input(api, g.project_info, state)
+        w.workflow_output(api, g.sly_det2_generated_metadata, state)
+        # ----------------------------------------------- - ---------------------------------------------- #
 
         # show result directory in UI
         fields = [
