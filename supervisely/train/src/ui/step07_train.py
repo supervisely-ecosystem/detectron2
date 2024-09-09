@@ -38,7 +38,7 @@ import step03_classes
 import step04_augs
 import step05_models
 
-import src.workflow as w
+import workflow as w
 
 _open_lnk_name = "open_app.lnk"
 model_classes_path = os.path.join(g.info_dir, "model_classes.json")
