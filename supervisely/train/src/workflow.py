@@ -36,7 +36,6 @@ def workflow_input(api: sly.Api, project_info: sly.ProjectInfo, state: dict = No
 
 def workflow_output(api: sly.Api, det2_generated_metadata: dict, state:dict):
     try:
-        sly.logger.debug(f"Workflow Output: det2_generated_metadata <{type(det2_generated_metadata).__name__}>")
         checkpoints_list = det2_generated_metadata.get("checkpoints", [])
         if len(checkpoints_list) == 0:
             sly.logger.debug("Workflow Output: No checkpoints found. Cannot set workflow output.")
