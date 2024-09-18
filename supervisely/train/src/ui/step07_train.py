@@ -147,6 +147,9 @@ def upload_artifacts_and_log_progress(experiment_name):
     remote_config_path = os.path.join(remote_weights_dir, g.sly_det2.config_file)
     res_dir = g.api.file.upload_directory(g.team_id, g.artifacts_dir, remote_artifacts_dir, progress_size_cb=progress_cb)
     
+    sly.logger.debug(f"Uploaded weights to: {remote_weights_dir}")
+    sly.logger.debug(f"Weights ext: {g.sly_det2.weights_ext}")
+    
     # generate metadata file
     g.sly_det2_generated_metadata = g.sly_det2.generate_metadata(
         app_name=g.sly_det2.app_name,
