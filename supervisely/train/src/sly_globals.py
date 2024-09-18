@@ -96,3 +96,5 @@ seg_project_meta = None
 need_convert_to_sly = True
 need_register_datasets = True
 resize_transform = None
+
+sly_det2_generated_metadata = None # for project Workflow purposes
