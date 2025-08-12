@@ -622,13 +622,14 @@ def train(api: sly.Api, task_id, context, state, app_logger):
         # ------------------------------------------
 
         try:
+            sly.logger.info("Creating experiment info")
             model_name = f.get_model_name(state)
             create_experiment(
                 model_name, remote_dir, report_id, eval_metrics, primary_metric_name
             )
         except Exception as e:
-            sly.logger.warning(
-                f"Couldn't create experiment, this training session will not appear in experiments table. Error: {e}"
+            sly.logger.error(
+                f"Couldn't create experiment, this training session will not appear in the experiments table. Error: {e}"
             )
 
 
