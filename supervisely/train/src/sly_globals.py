@@ -96,3 +96,5 @@ need_register_datasets = True
 resize_transform = None
 
 sly_det2_generated_metadata = None # for project Workflow purposes
+train_size = None
+val_size = None
