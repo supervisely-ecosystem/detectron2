@@ -270,6 +270,11 @@ def get_config_path(state):
         config_path = os.path.join(g.models_configs_dir, selected_model.get('config'))
         return config_path
 
+def get_model_name(state):
+    models_by_dataset = get_pretrained_models()[state["pretrainedDataset"]]
+    selected_model = next(item for item in models_by_dataset
+                              if item["model"] == state["selectedModel"][state["pretrainedDataset"]])
+    return selected_model.get('model')
 
 def get_model_path_by_id(model_id):
     models_by_datasets = get_pretrained_models()
@@ -379,4 +384,3 @@ def mapper(dataset_dict, augment=True, replace_size=True):
         dataset_dict["instances"] = utils.filter_empty_instances(instances)
 
     return dataset_dict
-

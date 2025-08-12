@@ -28,6 +28,10 @@ from supervisely.app.v1.widgets.compare_gallery import CompareGallery
 from supervisely.app.v1.widgets.progress_bar import ProgressBar
 from supervisely.app.v1.widgets.chart import Chart
 
+from supervisely.nn.artifacts.artifacts import TrainInfo
+from supervisely.io.json import dump_json_file
+from dataclasses import asdict
+
 import sly_plain_train_yaml_based
 import sly_plain_train_python_based
 import sly_train_results_visualizer
@@ -158,7 +162,7 @@ def upload_artifacts_and_log_progress(experiment_name):
         task_type=g.sly_det2.task_type,
         config_path=remote_config_path,
     )
-    
+
     progress_other.reset_and_update()
     return res_dir
 
@@ -479,6 +483,34 @@ def deserialize_resize_transform(resize_transform: dict):
         raise Exception(f"Unexpected class of 'resize_transform': {cls}. Can't deserialize it.")
     return res
 
+def create_experiment(
+    model_name, remote_dir, report_id=None, eval_metrics=None, primary_metric_name=None
+):
+    train_info = TrainInfo(**g.sly_det2_generated_metadata)
+    experiment_info = g.sly_det2.convert_train_to_experiment_info(train_info)
+    experiment_info.experiment_name = f"{g.task_id} {g.project_info.name} {model_name}"
+    experiment_info.model_name = model_name
+    experiment_info.framework_name = f"{g.sly_det2.framework_name}"
+    experiment_info.train_size = g.train_size
+    experiment_info.val_size = g.val_size
+    experiment_info.evaluation_report_id = report_id
+    experiment_info.experiment_report_id = None
+    if report_id is not None:
+        experiment_info.evaluation_report_link = f"/model-benchmark?id={str(report_id)}"
+    experiment_info.evaluation_metrics = eval_metrics
+
+    experiment_info_json = asdict(experiment_info)
+    experiment_info_json["project_preview"] = g.project_info.image_preview_url
+    experiment_info_json["primary_metric"] = primary_metric_name
+
+    g.api.task.set_output_experiment(g.task_id, experiment_info_json)
+    experiment_info_json.pop("project_preview")
+    experiment_info_json.pop("primary_metric")
+
+    experiment_info_path = os.path.join(g.artifacts_dir, "experiment_info.json")
+    remote_experiment_info_path = os.path.join(remote_dir, "experiment_info.json")
+    dump_json_file(experiment_info_json, experiment_info_path)
+    g.api.file.upload(g.team_id, experiment_info_path, remote_experiment_info_path)
 
 @g.my_app.callback("update_train_cycle")
 @sly.update_fields
@@ -545,7 +577,7 @@ def train(api: sly.Api, task_id, context, state, app_logger):
 
         g.resize_transform = get_resize_transform(cfg)
         save_config_locally(cfg, config_path)
-        
+
         # TRAIN HERE
         # --------
 
@@ -578,6 +610,28 @@ def train(api: sly.Api, task_id, context, state, app_logger):
             {"field": "state.started", "payload": False},
         ]
         g.api.app.set_fields(g.task_id, fields)
+
+        benchmark_report_template, report_id, eval_metrics, primary_metric_name = (
+            None,
+            None,
+            None,
+            None,
+        )
+
+        # Implement model evaluation benchmark here
+        # ------------------------------------------
+
+        try:
+            model_name = f.get_model_name(state)
+            create_experiment(
+                model_name, remote_dir, report_id, eval_metrics, primary_metric_name
+            )
+        except Exception as e:
+            sly.logger.warning(
+                f"Couldn't create experiment, this training session will not appear in experiments table. Error: {e}"
+            )
+
+
     except Exception as e:
         api.app.set_field(task_id, "state.started", False)
         raise e  # app will handle this error and show modal window

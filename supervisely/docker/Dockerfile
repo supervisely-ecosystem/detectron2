@@ -1,4 +1,4 @@
-FROM supervisely/base-py-sdk:6.72.30
+FROM supervisely/base-py-sdk:6.73.418
 
 
 # Install PyTorch
