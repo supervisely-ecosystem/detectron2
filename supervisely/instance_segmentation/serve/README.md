@@ -12,7 +12,7 @@
   <a href="#Acknowledgment">Acknowledgment</a>
 </p>
 
-[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](../../../../supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve)
+[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](../../../../../../../supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve)
 [![](https://img.shields.io/badge/slack-chat-green.svg?logo=slack)](https://supervisely.com/slack)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/supervisely-ecosystem/detectron2)
 [![views](https://app.supervisely.com/img/badges/views/supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve.png)](https://supervisely.com)
@@ -95,7 +95,7 @@ We have integrated popular architectures into this application.
 
 # How to Run
 
-### 1. Add [Serve Detectron2](../../../../supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve) to your team
+### 1. Add [Serve Detectron2](../../../../../../../supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve) to your team
 <img data-key="sly-module-link" data-module-slug="supervisely-ecosystem/detectron2/supervisely/instance_segmentation/serve" src="https://imgur.com/jKrRF7p.png" width="350px" style='padding-bottom: 10px'/>
 
 ### 2. Choose model, deploying device and press the **Run** button
