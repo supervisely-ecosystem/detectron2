@@ -14,3 +14,5 @@ RUN pip3 install detectron2 -f \
 
 
 RUN git clone https://github.com/supervisely-ecosystem/detectron2
+
+LABEL python_sdk_version="6.73.486"
