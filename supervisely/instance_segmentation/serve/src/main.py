@@ -210,9 +210,24 @@ class Detectron2Model(sly.nn.inference.InstanceSegmentation):
         input = self.preprocess_image(image)
         outputs = self.model([input])[0]  # get predictions from Detectron2 model
         pred_classes = outputs["instances"].pred_classes.detach().cpu().numpy()
-        pred_class_names = [self.class_names[pred_class] for pred_class in pred_classes]
-        pred_scores = outputs["instances"].scores.detach().cpu().numpy().tolist()
+        pred_scores = outputs["instances"].scores.detach().cpu().numpy()
         pred_masks = outputs["instances"].pred_masks.detach().cpu().numpy()
+        num_classes = len(self.class_names)
+        valid_mask = pred_classes < num_classes
+        if not np.all(valid_mask):
+            invalid = pred_classes[~valid_mask]
+            sly.logger.warning(
+                "Predicted class id(s) out of range",
+                extra={
+                    "num_classes": num_classes,
+                    "invalid_class_ids": invalid.tolist(),
+                },
+            )
+
+        pred_classes = pred_classes[valid_mask]
+        pred_scores = pred_scores[valid_mask]
+        pred_masks = pred_masks[valid_mask]
+        pred_class_names = [self.class_names[pred_class] for pred_class in pred_classes]
 
         results = []
         for score, class_name, mask in zip(pred_scores, pred_class_names, pred_masks):
